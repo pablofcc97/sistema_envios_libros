@@ -29,12 +29,16 @@ export async function GET(req: NextRequest) {
     { header: 'Cliente', key: 'cliente', width: 30 },
     { header: 'DNI', key: 'dni', width: 14 },
     { header: 'Celular', key: 'celular', width: 14 },
+    { header: 'Correo', key: 'email', width: 14 },
     { header: 'Dirección', key: 'direccion', width: 35 },
+    { header: 'Referencia', key: 'referencia', width: 35 },
+    { header: 'Departamento', key: 'departamento', width: 35 },
     { header: 'Courier', key: 'courier', width: 16 },
     { header: 'Clave de envío', key: 'claveEnvio', width: 18 },
     { header: 'Libros', key: 'libros', width: 40 },
     { header: 'Estado', key: 'estado', width: 16 },
     { header: 'Fecha', key: 'fecha', width: 14 },
+    { header: 'Observaciones', key: 'observaciones', width: 40 },
   ]
   sheet.getRow(1).font = { bold: true }
 
@@ -43,12 +47,16 @@ export async function GET(req: NextRequest) {
       cliente: e.cliente.nombre,
       dni: e.cliente.dni,
       celular: e.cliente.celular,
-      direccion: e.agencia,
+      email: e.cliente.email,
+      direccion: e.direccion,
+      referencia: e.referencia,
+      departamento: e.departamento,
       courier: e.courier.nombre,
       claveEnvio: e.claveEnvio,
       libros: e.productos.map((p) => `${p.producto.nombre} x${p.cantidad}`).join(', '),
       estado: e.estado,
       fecha: e.createdAt.toLocaleDateString('es-PE'),
+      observaciones: e.observaciones,
     })
   })
 

@@ -10,6 +10,7 @@ export async function crearCliente(formData: FormData) {
       nombre: formData.get('nombre') as string,
       dni: formData.get('dni') as string,
       celular: formData.get('celular') as string,
+      email: formData.get('email') as string,
     },
   })
   redirect('/clientes')
@@ -22,6 +23,7 @@ export async function actualizarCliente(id: string, formData: FormData) {
       nombre: formData.get('nombre') as string,
       dni: formData.get('dni') as string,
       celular: formData.get('celular') as string,
+      email: formData.get('email') as string,
     },
   })
   redirect('/clientes')

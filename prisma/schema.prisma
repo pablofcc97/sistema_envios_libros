@@ -11,6 +11,7 @@ model Cliente {
   nombre    String
   dni       String   @unique
   celular   String
+  email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   envios    Envio[]
@@ -31,17 +32,20 @@ model Courier {
 }
 
 model Envio {
-  id          String          @id @default(cuid())
-  cliente     Cliente         @relation(fields: [clienteId], references: [id])
-  clienteId   String
-  courier     Courier         @relation(fields: [courierId], references: [id])
-  courierId   String
-  agencia     String
-  claveEnvio  String
-  estado      String          @default("pendiente")
-  productos   EnvioProducto[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id           String          @id @default(cuid())
+  cliente      Cliente         @relation(fields: [clienteId], references: [id])
+  clienteId    String
+  courier      Courier         @relation(fields: [courierId], references: [id])
+  courierId    String
+  direccion    String
+  referencia   String?
+  departamento String
+  claveEnvio   String
+  observaciones String?
+  estado       String          @default("pendiente")
+  productos    EnvioProducto[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
 
 model EnvioProducto {

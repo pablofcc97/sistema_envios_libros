@@ -5,11 +5,14 @@ import { marcarRegistrado } from '@/app/envios/actions'
 
 type Envio = {
   id: string
-  agencia: string
+  direccion: string
+  departamento: string
+  referencia: string
   claveEnvio: string
   estado: string
+  observaciones: string
   createdAt: Date
-  cliente: { nombre: string; dni: string; celular: string }
+  cliente: { nombre: string; dni: string; email: string; celular: string }
   courier: { nombre: string }
   productos: { cantidad: number; producto: { nombre: string } }[]
 }
@@ -70,11 +73,15 @@ export function TablaEnvios({ envios }: { envios: Envio[] }) {
             <th className="p-2">Cliente</th>
             <th className="p-2">DNI</th>
             <th className="p-2">Celular</th>
+            <th className="p-2">Correo</th>
+            <th className="p-2">Dirección</th>
+            <th className="p-2">Referencia</th>
+            <th className="p-2">Departamento</th>
             <th className="p-2">Courier</th>
-            <th className="p-2">Agencia</th>
             <th className="p-2">Clave</th>
             <th className="p-2">Libros</th>
             <th className="p-2">Estado</th>
+            <th className="p-2">Observaciones</th>
             <th className="p-2">Fecha</th>
             <th className="p-2"></th>
           </tr>
@@ -88,8 +95,11 @@ export function TablaEnvios({ envios }: { envios: Envio[] }) {
               <Celda valor={e.cliente.nombre} />
               <Celda valor={e.cliente.dni} />
               <Celda valor={e.cliente.celular} />
+              <Celda valor={e.cliente.email} />
+              <Celda valor={e.direccion} />
+              <Celda valor={e.referencia} />
+              <Celda valor={e.departamento} />
               <Celda valor={e.courier.nombre} />
-              <Celda valor={e.agencia} />
               <Celda valor={e.claveEnvio} />
               <Celda valor={e.productos.map((p) => `${p.producto.nombre} x${p.cantidad}`).join(', ')} />
               <td className="p-2">
@@ -97,6 +107,7 @@ export function TablaEnvios({ envios }: { envios: Envio[] }) {
                   {e.estado}
                 </span>
               </td>
+              <Celda valor={e.observaciones} />
               <td className="p-2">{e.createdAt.toLocaleDateString('es-PE')}</td>
               <td className="p-2">
                 {e.estado !== 'registrado' && (

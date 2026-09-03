@@ -7,6 +7,7 @@ export default function NuevoCliente() {
       <input name="nombre" placeholder="Nombre completo" required className="w-full border p-2 rounded" />
       <input name="dni" placeholder="DNI" required className="w-full border p-2 rounded" />
       <input name="celular" placeholder="Celular" required className="w-full border p-2 rounded" />
+      <input name="email" placeholder="Email" type="email" required className="w-full border p-2 rounded" />
       <button type="submit" className="bg-black text-white px-4 py-2 rounded">Guardar</button>
     </form>
   )

@@ -13,7 +13,7 @@ const styles = StyleSheet.create({
   },
   nombre: { fontSize: 16, fontWeight: 'bold', marginBottom: 14, textAlign: 'center', textTransform: 'uppercase' },
   dni: { fontSize: 26, fontWeight: 'bold', marginBottom: 14 },
-  agencia: { fontSize: 12, marginBottom: 18, textAlign: 'center', textTransform: 'uppercase' },
+  direccion: { fontSize: 12, marginBottom: 18, textAlign: 'center', textTransform: 'uppercase' },
   cel: { fontSize: 22, fontWeight: 'bold', marginBottom: 18 },
   libros: { fontSize: 9, textAlign: 'right', width: '100%', paddingRight: 10 },
   courier: { fontSize: 10, fontWeight: 'bold', textAlign: 'right', width: '100%', paddingRight: 10, textTransform: 'uppercase' },
@@ -24,7 +24,7 @@ type Envio = {
   cliente: string
   dni: string
   celular: string
-  agencia: string
+  direccion: string
   courier: string
   libros: string
 }
@@ -34,7 +34,7 @@ function Rotulo({ envio }: { envio: Envio }) {
     <View style={styles.mitad}>
       <Text style={styles.nombre}>{envio.cliente}</Text>
       <Text style={styles.dni}>DNI: {envio.dni}</Text>
-      <Text style={styles.agencia}>{envio.agencia}</Text>
+      <Text style={styles.direccion}>{envio.direccion}</Text>
       <Text style={styles.cel}>CEL: {envio.celular}</Text>
       <Text style={styles.courier}>{envio.courier}</Text>
       <Text style={styles.libros}>{envio.libros}</Text>

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     cliente: e.cliente.nombre,
     dni: e.cliente.dni,
     celular: e.cliente.celular,
-    agencia: e.agencia,
+    direccion: e.direccion,
     courier: e.courier.nombre,
     libros: e.productos.map((p) => `${p.producto.nombre} x${p.cantidad}`).join(', '),
   }))

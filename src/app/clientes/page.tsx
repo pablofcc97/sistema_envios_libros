@@ -20,6 +20,7 @@ export default async function ClientesPage() {
             <th className="p-2">Nombre</th>
             <th className="p-2">DNI</th>
             <th className="p-2">Celular</th>
+            <th className="p-2">Email</th>
             <th className="p-2"></th>
           </tr>
         </thead>
@@ -29,6 +30,7 @@ export default async function ClientesPage() {
               <td className="p-2">{c.nombre}</td>
               <td className="p-2">{c.dni}</td>
               <td className="p-2">{c.celular}</td>
+              <td className="p-2">{c.email}</td>
               <td className="p-2 flex gap-3">
                 <Link href={`/clientes/${c.id}/editar`} className="text-xs underline">Editar</Link>
                 <form action={eliminarCliente.bind(null, c.id)}>
