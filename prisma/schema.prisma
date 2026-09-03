@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nombre    String
+  dni       String   @unique
+  celular   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  envios    Envio[]
+}
+
+model Producto {
+  id        String          @id @default(cuid())
+  nombre    String
+  createdAt DateTime        @default(now())
+  envios    EnvioProducto[]
+}
+
+model Courier {
+  id        String   @id @default(cuid())
+  nombre    String   @unique
+  createdAt DateTime @default(now())
+  envios    Envio[]
+}
+
+model Envio {
+  id          String          @id @default(cuid())
+  cliente     Cliente         @relation(fields: [clienteId], references: [id])
+  clienteId   String
+  courier     Courier         @relation(fields: [courierId], references: [id])
+  courierId   String
+  agencia     String
+  claveEnvio  String
+  estado      String          @default("pendiente")
+  productos   EnvioProducto[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model EnvioProducto {
+  id         String   @id @default(cuid())
+  envio      Envio    @relation(fields: [envioId], references: [id], onDelete: Cascade)
+  envioId    String
+  producto   Producto @relation(fields: [productoId], references: [id])
+  productoId String
+  cantidad   Int      @default(1)
+
+  @@unique([envioId, productoId])
+}
