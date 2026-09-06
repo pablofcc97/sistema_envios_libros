@@ -45,7 +45,7 @@ export default async function EnviosPage() {
       </div>
 
       {/* Tabla Interactiva con Filtros y Exportación */}
-      <TablaEnvios enviosIniciales={envios} />
+      <TablaEnvios enviosIniciales={envios} couriers={couriers} productos={productos}/>
     </div>
   )
 }

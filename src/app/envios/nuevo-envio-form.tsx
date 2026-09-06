@@ -20,10 +20,13 @@ export default function FormularioNuevoEnvio({
   couriers: Courier[]
   productos: Producto[]
 }) {
+  // Preseleccionar la courier SHALOM si existe en la base de datos
+  const shalomCourier = couriers.find((c) => c.nombre.toUpperCase().includes('SHALOM'))
+
   return (
     <form action={crearEnvio} className="space-y-4 text-slate-100">
       
-      {/* Datos del Cliente */}
+      {/* Cliente */}
       <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <h3 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-2">
           Cliente
@@ -68,7 +71,7 @@ export default function FormularioNuevoEnvio({
         </div>
       </div>
 
-      {/* Detalles del Envío */}
+      {/* Envío */}
       <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <h3 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-2">
           Envío
@@ -78,6 +81,7 @@ export default function FormularioNuevoEnvio({
             <label className="block text-xs text-slate-400 mb-1">Courier *</label>
             <select
               name="courierId"
+              defaultValue={shalomCourier?.id || ''}
               required
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -104,29 +108,34 @@ export default function FormularioNuevoEnvio({
               ))}
             </select>
           </div>
+          
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Referencia</label>
+            <select
+              name="referencia"
+              defaultValue="Agencia SHALOM"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Agencia SHALOM">Agencia SHALOM</option>
+              <option value="Agencia OLVA">Agencia OLVA</option>
+              <option value="Domicilio del cliente">Domicilio del cliente</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Clave de Envío (Opcional)</label>
+            <input
+              name="claveEnvio"
+              placeholder="Ej. 1234 (Se puede agregar después)"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           <div className="sm:col-span-2">
-            <label className="block text-xs text-slate-400 mb-1">Dirección / Agencia *</label>
+            <label className="block text-xs text-slate-400 mb-1">Dirección / Agencia (Opcional)</label>
             <input
               name="direccion"
               placeholder="Av. Principal 123 o Agencia Shalom"
-              required
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Referencia</label>
-            <input
-              name="referencia"
-              placeholder="Frente a la plaza"
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Clave de Envío *</label>
-            <input
-              name="claveEnvio"
-              placeholder="Clave para recojo"
-              required
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -180,7 +189,7 @@ export default function FormularioNuevoEnvio({
         type="submit"
         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-600/20 text-sm"
       >
-        Guardar Envío
+        Guardar Envío Pendiente
       </button>
     </form>
   )

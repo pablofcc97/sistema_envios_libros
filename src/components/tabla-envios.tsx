@@ -21,6 +21,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ModalMarcarRegistrado } from '@/components/modal-marcar-registrado'
+import { eliminarEnvio } from '@/app/envios/actions'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import FormularioEditarEnvio from '@/app/envios/editar-envio-form'
 
 function BotonCopiar({ valor }: { valor: string }) {
   const [copiado, setCopiado] = useState(false)
@@ -44,11 +48,21 @@ function BotonCopiar({ valor }: { valor: string }) {
   )
 }
 
-export function TablaEnvios({ enviosIniciales }: { enviosIniciales: any[] }) {
+export function TablaEnvios({
+  enviosIniciales,
+  couriers,
+  productos,
+}: {
+  enviosIniciales: any[]
+  couriers: any[]
+  productos: any[]
+}){
   const router = useRouter()
   const [busqueda, setBusqueda] = useState('')
   const [fechaFiltro, setFechaFiltro] = useState('')
   const [seleccionados, setSeleccionados] = useState<string[]>([])
+  const [envioACompletar, setEnvioACompletar] = useState<any>(null)
+  const [envioAEditar, setEnvioAEditar] = useState<any>(null)
 
   const toggleSelección = (id: string) => {
     setSeleccionados((prev) =>
@@ -193,16 +207,36 @@ export function TablaEnvios({ enviosIniciales }: { enviosIniciales: any[] }) {
                     {envio.productos.map((p: any) => `${p.producto.nombre} (x${p.cantidad})`).join(', ')}
                   </td>
                   <td className="p-3">
-                    <Badge
-                      variant="outline"
-                      className={`border-slate-700 ${
-                        envio.estado === 'registrado'
-                          ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
-                          : 'bg-slate-800 text-slate-300'
-                      }`}
-                    >
-                      {envio.estado}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`border-slate-700 ${
+                          envio.estado === 'registrado'
+                            ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+                            : 'bg-amber-950/40 text-amber-400 border-amber-800/60'
+                        }`}
+                      >
+                        {envio.estado}
+                      </Badge>
+
+                      {envio.estado === 'pendiente' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setEnvioACompletar({
+                              id: envio.id,
+                              clienteNombre: envio.cliente.nombre,
+                              direccion: envio.direccion,
+                              claveEnvio: envio.claveEnvio,
+                            })
+                          }
+                          className="h-7 px-2 text-xs bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/50"
+                        >
+                          Registrar
+                        </Button>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 text-xs text-slate-400 whitespace-nowrap">
                     {new Date(envio.createdAt).toLocaleDateString('es-PE')}
@@ -222,10 +256,21 @@ export function TablaEnvios({ enviosIniciales }: { enviosIniciales: any[] }) {
                           <Printer className="w-4 h-4 text-blue-400" /> Imprimir Rótulo
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => router.push(`/clientes/${envio.cliente.id}/editar`)}
+                          onClick={() => setEnvioAEditar(envio)}
                           className="gap-2 cursor-pointer focus:bg-slate-800"
                         >
-                          <Edit className="w-4 h-4 text-slate-400" /> Editar Cliente
+                          <Edit className="w-4 h-4 text-slate-400" /> Editar Envío
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            if (confirm(`¿Estás seguro de eliminar el envío de ${envio.cliente.nombre}?`)) {
+                              await eliminarEnvio(envio.id)
+                            }
+                          }}
+                          className="gap-2 cursor-pointer text-red-400 focus:bg-slate-800 focus:text-red-400"
+                        >
+                          <Trash2 className="w-4 h-4" /> Eliminar Envío
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -243,6 +288,26 @@ export function TablaEnvios({ enviosIniciales }: { enviosIniciales: any[] }) {
           </table>
         </div>
       </div>
+      <ModalMarcarRegistrado
+        envio={envioACompletar}
+        open={!!envioACompletar}
+        onOpenChange={(open) => !open && setEnvioACompletar(null)}
+      />
+      <Sheet open={!!envioAEditar} onOpenChange={(open) => !open && setEnvioAEditar(null)}>
+        <SheetContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="text-white">Editar Envío</SheetTitle>
+          </SheetHeader>
+          {envioAEditar && (
+            <FormularioEditarEnvio
+              envio={envioAEditar}
+              couriers={couriers}
+              productos={productos}
+              onSuccess={() => setEnvioAEditar(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
