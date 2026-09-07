@@ -26,10 +26,11 @@ import { eliminarEnvio } from '@/app/envios/actions'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import FormularioEditarEnvio from '@/app/envios/editar-envio-form'
 
-function BotonCopiar({ valor }: { valor: string }) {
+function BotonCopiar({ valor, tooltip = 'Copiar' }: { valor: string; tooltip?: string }) {
   const [copiado, setCopiado] = useState(false)
 
-  async function copiar() {
+  async function copiar(e: React.MouseEvent) {
+    e.stopPropagation()
     if (!valor) return
     await navigator.clipboard.writeText(valor)
     setCopiado(true)
@@ -40,10 +41,14 @@ function BotonCopiar({ valor }: { valor: string }) {
     <button
       type="button"
       onClick={copiar}
-      className="text-slate-500 hover:text-slate-200 transition-colors inline-flex items-center ml-1"
-      title="Copiar texto"
+      className="cursor-pointer text-slate-500 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition-all inline-flex items-center justify-center shrink-0"
+      title={copiado ? '¡Copiado!' : tooltip}
     >
-      {copiado ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+      {copiado ? (
+        <Check className="w-3.5 h-3.5 text-emerald-400" />
+      ) : (
+        <Copy className="w-3.5 h-3.5" />
+      )}
     </button>
   )
 }
@@ -101,6 +106,22 @@ export function TablaEnvios({
   const handleExportarExcel = () => {
     const url = fechaFiltro ? `/api/exportar?fecha=${fechaFiltro}` : '/api/exportar'
     window.open(url, '_blank')
+  }
+
+  // Comprobar si todos los envíos visibles están seleccionados
+  const todosSeleccionados =
+    enviosFiltrados.length > 0 &&
+    enviosFiltrados.every((envio) => seleccionados.includes(envio.id))
+
+  // Alternar entre seleccionar todos o desmarcar todos
+  function toggleSeleccionarTodos() {
+    if (todosSeleccionados || seleccionados.length > 0) {
+      // Si hay alguno o todos seleccionados, desmarcar todo
+      setSeleccionados([])
+    } else {
+      // Si ninguno está seleccionado, seleccionar todos los visibles
+      setSeleccionados(enviosFiltrados.map((e) => e.id))
+    }
   }
 
   return (
@@ -163,7 +184,20 @@ export function TablaEnvios({
           <table className="w-full text-sm text-left text-slate-300">
             <thead className="bg-slate-950/60 text-slate-400 uppercase text-xs border-b border-slate-800">
               <tr>
-                <th className="p-3 w-8"></th>
+                {/* Checkbox Maestro de Selección / Deselección Global */}
+                <th className="p-4 w-12 text-center">
+                  <input
+                    type="checkbox"
+                    checked={todosSeleccionados}
+                    onChange={toggleSeleccionarTodos}
+                    className="w-5 h-5 cursor-pointer rounded accent-blue-600 bg-slate-800 border-slate-700 hover:border-blue-500 transition-colors"
+                    title={
+                      todosSeleccionados || seleccionados.length > 0
+                        ? 'Desmarcar todos'
+                        : 'Marcar todos'
+                    }
+                  />
+                </th>
                 <th className="p-3">Cliente</th>
                 <th className="p-3">Courier / Destino</th>
                 <th className="p-3">Clave</th>
@@ -176,28 +210,41 @@ export function TablaEnvios({
             <tbody className="divide-y divide-slate-800/80">
               {enviosFiltrados.map((envio) => (
                 <tr key={envio.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="p-3">
+                  <td className="p-4 w-12 text-center">
                     <input
                       type="checkbox"
                       checked={seleccionados.includes(envio.id)}
                       onChange={() => toggleSelección(envio.id)}
-                      className="rounded accent-blue-600 bg-slate-800 border-slate-700"
+                      className="w-5 h-5 cursor-pointer rounded accent-blue-600 bg-slate-800 border-slate-700 hover:border-blue-500 transition-colors"
                     />
                   </td>
-                  <td className="p-3">
-                    <div className="font-medium text-slate-100 flex items-center">
-                      {envio.cliente.nombre} <BotonCopiar valor={envio.cliente.nombre} />
-                    </div>
-                    <div className="text-xs text-slate-400 flex items-center">
-                      DNI: {envio.cliente.dni} <BotonCopiar valor={envio.cliente.dni} />
-                      <span className="mx-1">•</span>
-                      {envio.cliente.celular} <BotonCopiar valor={envio.cliente.celular} />
+                  <td className="p-4">
+                    <div className="space-y-1">
+                      {/* Nombre */}
+                      <div className="font-medium text-slate-100 flex items-center gap-1.5">
+                        <span>{envio.cliente.nombre}</span>
+                        <BotonCopiar valor={envio.cliente.nombre} tooltip="Copiar Nombre" />
+                      </div>
+
+                      {/* DNI Destacado en un Badge/Caja ligera para copiar rápido */}
+                      <div className="flex items-center gap-3">
+                        <div className="inline-flex items-center gap-1 bg-slate-800/90 border border-slate-700/80 px-2 py-0.5 rounded text-xs font-mono font-bold text-blue-300">
+                          <span>DNI: {envio.cliente.dni}</span>
+                          <BotonCopiar valor={envio.cliente.dni} tooltip="Copiar DNI" />
+                        </div>
+
+                        {/* Celular */}
+                        <div className="text-xs text-slate-400 flex items-center gap-1">
+                          <span>Cel: {envio.cliente.celular}</span>
+                          <BotonCopiar valor={envio.cliente.celular} tooltip="Copiar Celular" />
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="p-3">
                     <span className="font-medium text-blue-400">{envio.courier.nombre}</span>
                     <div className="text-xs text-slate-400 flex items-center">
-                      {envio.departamento} - {envio.direccion} <BotonCopiar valor={envio.direccion} />
+                      {envio.departamento} - {envio.direccion}
                     </div>
                   </td>
                   <td className="p-3 font-mono text-slate-200">
@@ -294,9 +341,11 @@ export function TablaEnvios({
         onOpenChange={(open) => !open && setEnvioACompletar(null)}
       />
       <Sheet open={!!envioAEditar} onOpenChange={(open) => !open && setEnvioAEditar(null)}>
-        <SheetContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-xl overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle className="text-white">Editar Envío</SheetTitle>
+        <SheetContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-xl p-4 sm:p-6 overflow-y-auto">
+          <SheetHeader className="pb-3 mb-3 border-b border-slate-800">
+            <SheetTitle className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Editar Envío
+            </SheetTitle>
           </SheetHeader>
           {envioAEditar && (
             <FormularioEditarEnvio

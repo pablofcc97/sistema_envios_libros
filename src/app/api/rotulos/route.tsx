@@ -21,8 +21,13 @@ export async function GET(req: NextRequest) {
     dni: e.cliente.dni,
     celular: e.cliente.celular,
     direccion: e.direccion,
+    departamento: e.departamento,
     courier: e.courier.nombre,
     libros: e.productos.map((p) => `${p.producto.nombre} x${p.cantidad}`).join(', '),
+    productosDetalle: e.productos.map((p) => ({
+      nombre: p.producto.nombre,
+      cantidad: p.cantidad,
+    })),
   }))
 
   const buffer = await renderToBuffer(<RotulosDocument envios={envios} />)

@@ -35,9 +35,11 @@ export default async function EnviosPage() {
               Nuevo Envío
             </Button>
           </SheetTrigger>
-          <SheetContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-xl overflow-y-auto">
-            <SheetHeader className="mb-4">
-              <SheetTitle className="text-white">Registrar Nuevo Envío</SheetTitle>
+          <SheetContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-xl p-6 sm:p-4 overflow-y-auto">
+            <SheetHeader className="pb-4 mb-2 border-b border-slate-800">
+              <SheetTitle className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                Registrar Nuevo Envío
+              </SheetTitle>
             </SheetHeader>
             <FormularioNuevoEnvio couriers={couriers} productos={productos} />
           </SheetContent>

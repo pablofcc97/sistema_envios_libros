@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { crearEnvio } from './actions'
 
 const DEPARTAMENTOS_PERU = [
@@ -20,8 +21,23 @@ export default function FormularioNuevoEnvio({
   couriers: Courier[]
   productos: Producto[]
 }) {
-  // Preseleccionar la courier SHALOM si existe en la base de datos
   const shalomCourier = couriers.find((c) => c.nombre.toUpperCase().includes('SHALOM'))
+
+  const [dni, setDni] = useState('')
+  const [celular, setCelular] = useState('')
+
+  // Función para limpiar espacios, guiones y caracteres no numéricos
+  const limpiarTextoNumerico = (texto: string, maxLen: number) => {
+    return texto.replace(/\D/g, '').slice(0, maxLen)
+  }
+
+  const handleDniChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDni(limpiarTextoNumerico(e.target.value, 8))
+  }
+
+  const handleCelularChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCelular(limpiarTextoNumerico(e.target.value, 9))
+  }
 
   return (
     <form action={crearEnvio} className="space-y-4 text-slate-100">
@@ -32,15 +48,7 @@ export default function FormularioNuevoEnvio({
           Cliente
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">DNI *</label>
-            <input
-              name="dni"
-              placeholder="70123456"
-              required
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {/* 1. Nombre primero */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Nombre *</label>
             <input
@@ -50,15 +58,40 @@ export default function FormularioNuevoEnvio({
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* DNI */}
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Celular *</label>
+            <label className="block text-xs text-slate-400 mb-1">DNI * (8 dígitos)</label>
             <input
-              name="celular"
-              placeholder="987654321"
+              name="dni"
+              value={dni}
+              onChange={handleDniChange}
+              placeholder="70123456"
               required
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              minLength={8}
+              pattern="\d{8}"
+              title="El DNI debe tener exactamente 8 dígitos"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
           </div>
+
+          {/* Celular */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Celular * (9 dígitos)</label>
+            <input
+              name="celular"
+              value={celular}
+              onChange={handleCelularChange}
+              placeholder="987654321"
+              required
+              minLength={9}
+              pattern="\d{9}"
+              title="El celular debe tener exactamente 9 dígitos"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            />
+          </div>
+
+          {/* 4. Email */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Email</label>
             <input
@@ -127,7 +160,7 @@ export default function FormularioNuevoEnvio({
             <input
               name="claveEnvio"
               placeholder="Ej. 1234 (Se puede agregar después)"
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
           </div>
 
@@ -154,7 +187,7 @@ export default function FormularioNuevoEnvio({
                 type="checkbox"
                 name={`producto_${p.id}`}
                 id={`form_chk_${p.id}`}
-                className="w-4 h-4 rounded accent-blue-600 bg-slate-800 border-slate-700"
+                className="w-4 h-4 cursor-pointer rounded accent-blue-600 bg-slate-800 border-slate-700"
               />
               <label htmlFor={`form_chk_${p.id}`} className="flex-1 text-xs text-slate-200 cursor-pointer">
                 {p.nombre}
@@ -164,7 +197,7 @@ export default function FormularioNuevoEnvio({
                 name={`cantidad_${p.id}`}
                 defaultValue={1}
                 min={1}
-                className="w-14 bg-slate-800 border border-slate-700 text-slate-100 p-1 text-center rounded text-xs"
+                className="w-14 bg-slate-800 border border-slate-700 text-slate-100 p-1 text-center rounded text-xs font-mono"
               />
             </div>
           ))}
@@ -187,7 +220,7 @@ export default function FormularioNuevoEnvio({
 
       <button
         type="submit"
-        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-600/20 text-sm"
+        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-600/20 text-sm cursor-pointer"
       >
         Guardar Envío Pendiente
       </button>

@@ -36,24 +36,26 @@ export default function FormularioEditarEnvio({
     <form action={handleSubmit} className="space-y-4 text-slate-100">
       
       {/* Información del Cliente (Solo Lectura) */}
-      <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-300">
-        <div className="space-y-0.5">
-            <p className="text-slate-100 font-medium text-sm">{envio.cliente.nombre}</p>
+      <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex flex-col gap-3 text-xs text-slate-300">
+        <div className="space-y-1">
+          <p className="text-slate-100 font-semibold text-sm">{envio.cliente.nombre}</p>
+          <p className="text-slate-400">
+            DNI: <span className="text-slate-200 font-mono">{envio.cliente.dni}</span> • Cel: <span className="text-slate-200 font-mono">{envio.cliente.celular}</span>
+          </p>
+          {envio.cliente.email && (
             <p className="text-slate-400">
-            DNI: <span className="text-slate-200">{envio.cliente.dni}</span> • Cel: <span className="text-slate-200">{envio.cliente.celular}</span>
+              Email: <span className="text-slate-200">{envio.cliente.email}</span>
             </p>
-            {envio.cliente.email && (
-            <p className="text-slate-400">Email: <span className="text-slate-200">{envio.cliente.email}</span></p>
-            )}
+          )}
         </div>
 
         <Link
-            href={`/clientes/${envio.cliente.id}/editar`}
-            target="_blank"
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap"
+          href={`/clientes/${envio.cliente.id}/editar`}
+          target="_blank"
+          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg border border-slate-700 text-xs font-medium transition-colors flex items-center justify-center gap-2"
         >
-            <UserPen className="w-3.5 h-3.5 text-blue-400" />
-            Editar cliente
+          <UserPen className="w-3.5 h-3.5 text-blue-400" />
+          Editar cliente
         </Link>
       </div>
 
