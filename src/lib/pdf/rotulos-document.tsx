@@ -24,14 +24,14 @@ const styles = StyleSheet.create({
   headerBlock: {
     borderBottomWidth: 1.5,
     borderBottomColor: '#000',
-    paddingBottom: 6,
+    paddingBottom: 8,
     alignItems: 'center',
   },
   labelHeader: {
     fontSize: 8,
     fontWeight: 'bold',
     color: '#444',
-    marginBottom: 2,
+    marginBottom: 4,
     textTransform: 'uppercase',
   },
   nombre: {
@@ -39,16 +39,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     textTransform: 'uppercase',
+    paddingVertical: 4,
   },
   mainDataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#f2f2f2',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 6,
-    marginVertical: 4,
+    marginVertical: 6,
   },
   dniBox: { flex: 1, alignItems: 'flex-start' },
   celularBox: { flex: 1, alignItems: 'flex-end' },
@@ -57,23 +58,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#555',
     textTransform: 'uppercase',
+    marginBottom: 2,
   },
   bigDataValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
   },
   direccionBlock: {
-    paddingVertical: 4,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   direccion: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
     textTransform: 'uppercase',
     color: '#111',
-    lineHeight: 1.2,
+    lineHeight: 1.25,
+    marginTop: 4,
   },
   footerRow: {
     flexDirection: 'row',
@@ -81,19 +84,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     borderTopWidth: 1,
     borderTopColor: '#ccc',
-    paddingTop: 6,
-    marginTop: 2,
+    paddingTop: 8,
+    marginTop: 4,
     gap: 10,
   },
   courierBox: { justifyContent: 'flex-end' },
   courierBadge: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    backgroundColor: '#000',
-    color: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 4,
   },
   contenidoContainer: { flex: 1, alignItems: 'flex-end' },
@@ -111,7 +112,6 @@ const styles = StyleSheet.create({
     color: '#222',
     lineHeight: 1.2,
   },
-  // Bloque para el Resumen Consolidado de Libros
   resumenBlock: {
     marginTop: 8,
     padding: 8,
@@ -152,6 +152,19 @@ export type Envio = {
   productosDetalle?: ProductoDetalle[]
 }
 
+// Helper para determinar el color de fondo y texto del badge según el Courier
+function getCourierStyle(courierNombre: string) {
+  const nombre = (courierNombre || '').toUpperCase()
+
+  if (nombre.includes('SHALOM')) {
+    return { backgroundColor: '#EE2A2F', color: '#FFFFFF' }
+  }
+  if (nombre.includes('OLVA')) {
+    return { backgroundColor: '#F9B52F', color: '#000000' }
+  }
+  return { backgroundColor: '#000000', color: '#FFFFFF' }
+}
+
 function Rotulo({ envio }: { envio: Envio }) {
   const direccionBase = (envio.direccion || 'AGENCIA SHALOM').trim().toUpperCase()
   const depto = (envio.departamento || '').trim().toUpperCase()
@@ -160,6 +173,8 @@ function Rotulo({ envio }: { envio: Envio }) {
     depto && !direccionBase.includes(depto)
       ? `${direccionBase} - ${depto}`
       : direccionBase
+
+  const courierStyle = getCourierStyle(envio.courier)
 
   return (
     <View style={styles.mitad}>
@@ -187,7 +202,9 @@ function Rotulo({ envio }: { envio: Envio }) {
 
         <View style={styles.footerRow}>
           <View style={styles.courierBox}>
-            <Text style={styles.courierBadge}>{envio.courier}</Text>
+            <Text style={[styles.courierBadge, courierStyle]}>
+              {envio.courier}
+            </Text>
           </View>
           <View style={styles.contenidoContainer}>
             <Text style={styles.contenidoLabel}>Contenido:</Text>
@@ -200,7 +217,6 @@ function Rotulo({ envio }: { envio: Envio }) {
 }
 
 export function RotulosDocument({ envios }: { envios: Envio[] }) {
-  // 1. Calcular el total acumulado de todos los productos en la orden de impresión
   const conteoProductos = new Map<string, number>()
   let totalPaquetes = envios.length
 
@@ -215,7 +231,6 @@ export function RotulosDocument({ envios }: { envios: Envio[] }) {
     .map(([nombre, cant]) => `${nombre} x${cant}`)
     .join('  •  ')
 
-  // 2. Dividir en páginas de a 2 rótulos por hoja
   const paginas: Envio[][] = []
   for (let i = 0; i < envios.length; i += 2) {
     paginas.push(envios.slice(i, i + 2))
@@ -232,7 +247,6 @@ export function RotulosDocument({ envios }: { envios: Envio[] }) {
               <Rotulo key={envio.id} envio={envio} />
             ))}
 
-            {/* Solo renderiza la barra de resumen en la parte inferior de la ÚLTIMA página */}
             {esUltimaPagina && resumenTexto && (
               <View style={styles.resumenBlock}>
                 <Text style={styles.resumenTitle}>

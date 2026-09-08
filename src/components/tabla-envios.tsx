@@ -98,6 +98,7 @@ export function TablaEnvios({
     const coincideBusqueda =
       e.cliente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       e.cliente.dni.includes(busqueda) ||
+      e.cliente.celular.includes(busqueda) ||
       (e.cliente.email && e.cliente.email.toLowerCase().includes(busqueda.toLowerCase()))
 
     const fechaEnvio = new Date(e.createdAt).toISOString().split('T')[0]
@@ -133,7 +134,7 @@ export function TablaEnvios({
 
     window.open(`/api/rotulos?ids=${idsPendientesHoy.join(',')}`, '_blank')
   }
-
+  
   const handleExportarExcel = () => {
     let url = '/api/exportar'
 
@@ -177,16 +178,29 @@ export function TablaEnvios({
   const hoyStr = new Date().toISOString().split('T')[0]
 
   // 1. Hay al menos un envío registrado con fecha de hoy
-  const tienePendientesHoy = enviosIniciales.some((e) => {
+  // Filtrar los envíos de HOY que están en estado REGISTRADO
+  const enviosRegistradosHoy = enviosIniciales.filter((e) => {
     const fechaEnvio = new Date(e.createdAt).toISOString().split('T')[0]
     return fechaEnvio === hoyStr && e.estado === 'registrado'
   })
+
+  const tienePendientesHoy = enviosRegistradosHoy.length > 0
 
   // 2. Dentro de los seleccionados, hay al menos uno con estado 'registrado'
   const tieneRegistradosEnSeleccion = seleccionados.some((id) => {
     const envio = enviosIniciales.find((e) => e.id === id)
     return envio?.estado === 'registrado'
   })
+
+
+  const handleMarcarPendientesHoyRotulados = async () => {
+    const idsHoy = enviosRegistradosHoy.map((e) => e.id)
+    
+    if (idsHoy.length === 0) return
+
+    await marcarComoRotulados(idsHoy)
+    setSeleccionados([]) // Limpia cualquier selección activa
+  }
 
   return (
     <div className="space-y-4">
@@ -196,7 +210,7 @@ export function TablaEnvios({
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
             <Input
-              placeholder="Buscar por Nombre, DNI o Email..."
+              placeholder="Buscar por Nombre, DNI, Celular o Email..."
               value={busqueda}
               onChange={handleBusquedaChange}
               className="pl-9 bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 text-sm"
@@ -226,18 +240,16 @@ export function TablaEnvios({
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          {/* Acciones para cuando el usuario ha seleccionado filas manualmente */}
           {seleccionados.length > 0 && (
             <div className="flex items-center gap-2">
-              {/* Botón Marcar Rotulados: Solo se muestra si hay envíos 'registrados' en la selección */}
               {tieneRegistradosEnSeleccion && (
                 <Button
                   onClick={async () => {
-                    // Filtrar solo los IDs que están en estado registrado
                     const idsARotular = seleccionados.filter((id) => {
                       const e = enviosIniciales.find((item) => item.id === id)
                       return e?.estado === 'registrado'
                     })
-
                     await marcarComoRotulados(idsARotular)
                     setSeleccionados([])
                   }}
@@ -248,7 +260,6 @@ export function TablaEnvios({
                 </Button>
               )}
 
-              {/* Botón Imprimir Selección: Siempre disponible si hay al menos 1 seleccionado */}
               <Button
                 onClick={() => window.open(`/api/rotulos?ids=${seleccionados.join(',')}`, '_blank')}
                 className="bg-blue-600 hover:bg-blue-500 text-white gap-2 text-sm cursor-pointer"
@@ -259,16 +270,26 @@ export function TablaEnvios({
             </div>
           )}
 
-          {/* Botón Rótulos Pendientes de Hoy: Solo visible si hay al menos 1 'registrado' de hoy */}
+          {/* Botones rápidos de HOY (solo si existen envíos 'registrados' en el día) */}
           {tienePendientesHoy && (
-            <Button
-              onClick={handleRotulosPendientesHoy}
-              variant="outline"
-              className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 gap-2 text-sm cursor-pointer"
-            >
-              <Printer className="w-4 h-4 text-blue-400" />
-              Rótulos pendientes de hoy
-            </Button>
+            <>
+              <Button
+                onClick={handleMarcarPendientesHoyRotulados}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 text-sm cursor-pointer"
+              >
+                <Tag className="w-4 h-4" />
+                Marcar pendientes como rotulados ({enviosRegistradosHoy.length})
+              </Button>
+
+              <Button
+                onClick={handleRotulosPendientesHoy}
+                variant="outline"
+                className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 gap-2 text-sm cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-blue-400" />
+                Rótulos pendientes de hoy
+              </Button>
+            </>
           )}
 
           <Button

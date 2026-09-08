@@ -183,3 +183,35 @@ export async function marcarComoRotulados(ids: string[]) {
 
   revalidatePath('/envios')
 }
+
+export async function obtenerMetricasRapidas() {
+  const hoyStr = new Date().toISOString().split('T')[0]
+  const inicio = new Date(`${hoyStr}T00:00:00`)
+  const fin = new Date(`${hoyStr}T23:59:59.999`)
+
+  // Envíos del día que no estén en estado 'pendiente' (listos o ya procesados)
+  const enviosHoy = await prisma.envio.findMany({
+    where: {
+      createdAt: { gte: inicio, lte: fin },
+    },
+    include: { courier: true },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  // Última clave de envío generada/registrada hoy
+  const ultimoEnvioConClave = enviosHoy.find((e) => e.claveEnvio)
+  const ultimaClave = ultimoEnvioConClave?.claveEnvio || 'Sin clave hoy'
+
+  // Conteo de paquetes para llevar a agencia hoy (que estén 'registrado' o 'rotulado')
+  const enviosListos = enviosHoy.filter((e) => e.estado === 'registrado' || e.estado === 'rotulado')
+  
+  const totalShalom = enviosListos.filter((e) => e.courier.nombre.toUpperCase().includes('SHALOM')).length
+  const totalOlva = enviosListos.filter((e) => e.courier.nombre.toUpperCase().includes('OLVA')).length
+
+  return {
+    ultimaClave,
+    totalShalom,
+    totalOlva,
+    totalParaAgencia: totalShalom + totalOlva,
+  }
+}
