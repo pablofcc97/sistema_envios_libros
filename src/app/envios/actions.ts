@@ -137,6 +137,10 @@ export async function actualizarEnvioCompleto(id: string, formData: FormData) {
   const courierId = formData.get('courierId') as string
   const observaciones = (formData.get('observaciones') as string)?.trim() || null
 
+  // Procesar Fecha de Envío/Registro
+  const fechaStr = formData.get('createdAt') as string
+  const nuevaFecha = fechaStr ? new Date(`${fechaStr}T12:00:00Z`) : undefined
+
   const productos = await prisma.producto.findMany()
   const productosEnvio = productos
     .filter((p) => formData.get(`producto_${p.id}`) === 'on')
@@ -154,10 +158,26 @@ export async function actualizarEnvioCompleto(id: string, formData: FormData) {
       referencia,
       claveEnvio,
       observaciones,
+      ...(nuevaFecha ? { createdAt: nuevaFecha } : {}), // Actualiza la fecha solo si viene presente
       productos: {
         deleteMany: {}, // Limpia los productos anteriores
         create: productosEnvio, // Inserta la nueva lista
       },
+    },
+  })
+
+  revalidatePath('/envios')
+}
+
+export async function marcarComoRotulados(ids: string[]) {
+  if (!ids || ids.length === 0) return
+
+  await prisma.envio.updateMany({
+    where: {
+      id: { in: ids },
+    },
+    data: {
+      estado: 'rotulado',
     },
   })
 

@@ -3,6 +3,7 @@
 import { actualizarEnvioCompleto } from './actions'
 import Link from 'next/link'
 import { UserPen } from 'lucide-react'
+import { useState } from 'react'
 
 const DEPARTAMENTOS_PERU = [
   'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca',
@@ -23,6 +24,13 @@ export default function FormularioEditarEnvio({
   productos: any[]
   onSuccess: () => void
 }) {
+  // Convertir la fecha ISO a formato YYYY-MM-DD para el input date
+  const fechaInicial = envio.createdAt
+    ? new Date(envio.createdAt).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0]
+
+  const [fechaEnvio, setFechaEnvio] = useState(fechaInicial)
+
   const productosSeleccionadosMap = new Map(
     envio.productos.map((p: any) => [p.productoId, p.cantidad])
   )
@@ -127,6 +135,17 @@ export default function FormularioEditarEnvio({
               defaultValue={envio.direccion ?? ''}
               placeholder="Av. Principal 123 o Agencia Shalom"
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-slate-400 mb-1">Fecha de Registro / Envío *</label>
+            <input
+              type="date"
+              name="createdAt"
+              value={fechaEnvio}
+              onChange={(e) => setFechaEnvio(e.target.value)}
+              required
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark] cursor-pointer"
             />
           </div>
         </div>
