@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { crearEnvio } from './actions'
+import { crearEnvio } from '../../app/envios/actions'
 
 const DEPARTAMENTOS_PERU = [
   'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca',

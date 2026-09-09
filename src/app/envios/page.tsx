@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { TablaEnvios } from '@/components/tabla-envios'
+import { TablaEnvios } from '@/components/tablas/tabla-envios'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
-import FormularioNuevoEnvio from './nuevo-envio-form' // Componente extraído para el Sheet
+import FormularioNuevoEnvio from '../../components/formularios/nuevo-envio-form' // Componente extraído para el Sheet
 
 export default async function EnviosPage() {
   const envios = await prisma.envio.findMany({

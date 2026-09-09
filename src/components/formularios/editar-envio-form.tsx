@@ -1,6 +1,6 @@
 'use client'
 
-import { actualizarEnvioCompleto } from './actions'
+import { actualizarEnvioCompleto } from '../../app/envios/actions'
 import Link from 'next/link'
 import { UserPen } from 'lucide-react'
 import { useState } from 'react'

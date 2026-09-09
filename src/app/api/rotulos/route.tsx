@@ -20,12 +20,14 @@ export async function GET(req: NextRequest) {
     cliente: e.cliente.nombre,
     dni: e.cliente.dni,
     celular: e.cliente.celular,
-    direccion: e.direccion,
+    direccion: e.direccion || '',
     departamento: e.departamento,
     courier: e.courier.nombre,
-    libros: e.productos.map((p) => `${p.producto.nombre} x${p.cantidad}`).join(', '),
+    libros: e.productos
+      .map((p) => `${p.producto.nombreCorto || p.producto.nombre} x${p.cantidad}`)
+      .join(', '),
     productosDetalle: e.productos.map((p) => ({
-      nombre: p.producto.nombre,
+      nombre: p.producto.nombreCorto || p.producto.nombre,
       cantidad: p.cantidad,
     })),
   }))
