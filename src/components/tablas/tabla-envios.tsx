@@ -213,8 +213,7 @@ export function TablaEnvios({
 
               <Button
                 onClick={handleRotulosPendientesHoy}
-                variant="outline"
-                className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 gap-2 text-sm cursor-pointer"
+                className="bg-blue-600 hover:bg-blue-500 text-white gap-2 text-sm cursor-pointer font-medium"
               >
                 <Printer className="w-4 h-4 text-blue-400" />
                 Rótulos pendientes de hoy

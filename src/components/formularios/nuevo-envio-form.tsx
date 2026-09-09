@@ -12,7 +12,7 @@ const DEPARTAMENTOS_PERU = [
 ]
 
 type Courier = { id: string; nombre: string }
-type Producto = { id: string; nombre: string }
+type Producto = { id: string; nombre: string; nombreCorto?: string | null }
 
 export default function FormularioNuevoEnvio({
   couriers,
@@ -48,7 +48,7 @@ export default function FormularioNuevoEnvio({
           Cliente
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* 1. Nombre primero */}
+          {/* Nombre primero */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Nombre *</label>
             <input
@@ -91,7 +91,7 @@ export default function FormularioNuevoEnvio({
             />
           </div>
 
-          {/* 4. Email */}
+          {/* Email */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Email</label>
             <input
@@ -190,7 +190,7 @@ export default function FormularioNuevoEnvio({
                 className="w-4 h-4 cursor-pointer rounded accent-blue-600 bg-slate-800 border-slate-700"
               />
               <label htmlFor={`form_chk_${p.id}`} className="flex-1 text-xs text-slate-200 cursor-pointer">
-                {p.nombre}
+                {p.nombreCorto || p.nombre}
               </label>
               <input
                 type="number"

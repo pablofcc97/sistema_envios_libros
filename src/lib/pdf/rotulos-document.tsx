@@ -10,15 +10,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#aaa',
     borderBottomStyle: 'dashed',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
+    justifyContent: 'space-between',
   },
   card: {
     borderWidth: 2,
     borderColor: '#000',
     borderRadius: 8,
     padding: 12,
-    height: '100%',
+    flex: 1,
     justifyContent: 'space-between',
   },
   headerBlock: {
@@ -70,13 +71,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   referenciaText: {
-  fontSize: 13,
-  fontWeight: 'bold',
-  textAlign: 'center',
-  textTransform: 'uppercase',
-  color: '#000',
-  marginBottom: 6, // Margen ampliado para mayor separación visual
-},
+    fontSize: 13,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    color: '#000',
+    marginBottom: 6,
+  },
   direccion: {
     fontSize: 13,
     fontWeight: 'bold',
@@ -119,6 +120,18 @@ const styles = StyleSheet.create({
     color: '#222',
     lineHeight: 1.2,
   },
+  // Estilo externo para observaciones fuera del cuadro principal
+  obsExternaBlock: {
+    marginTop: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  obsExternaText: {
+    fontSize: 9,
+    color: '#333',
+    fontStyle: 'italic',
+    fontWeight: 'bold',
+  },
   resumenBlock: {
     marginTop: 8,
     padding: 8,
@@ -155,12 +168,12 @@ export type Envio = {
   direccion: string
   referencia?: string
   departamento?: string
+  observaciones?: string
   courier: string
   libros: string
   productosDetalle?: ProductoDetalle[]
 }
 
-// Helper para determinar el color de fondo y texto del badge según el Courier
 function getCourierStyle(courierNombre: string) {
   const nombre = (courierNombre || '').toUpperCase()
 
@@ -177,8 +190,8 @@ function Rotulo({ envio }: { envio: Envio }) {
   const direccionBase = (envio.direccion || '').trim().toUpperCase()
   const depto = (envio.departamento || '').trim().toUpperCase()
   const ref = (envio.referencia || '').trim().toUpperCase()
+  const obs = (envio.observaciones || '').trim()
 
-  // Concatenar SIEMPRE el departamento al final
   const direccionConDepto = depto
     ? `${direccionBase || 'AGENCIA SHALOM'} - ${depto}`
     : direccionBase || 'AGENCIA SHALOM'
@@ -187,6 +200,7 @@ function Rotulo({ envio }: { envio: Envio }) {
 
   return (
     <View style={styles.mitad}>
+      {/* Cuadro principal del rótulo (lo que va pegado en el paquete) */}
       <View style={styles.card}>
         <View style={styles.headerBlock}>
           <Text style={styles.labelHeader}>Destinatario</Text>
@@ -204,14 +218,9 @@ function Rotulo({ envio }: { envio: Envio }) {
           </View>
         </View>
 
-        {/* Bloque de Dirección en 2 líneas */}
         <View style={styles.direccionBlock}>
           <Text style={styles.labelHeader}>Destino / Dirección / Agencia</Text>
-
-          {/* Línea 1: Referencia/Agencia entre paréntesis */}
           {ref ? <Text style={styles.referenciaText}>({ref})</Text> : null}
-
-          {/* Línea 2: Dirección base - Departamento */}
           <Text style={styles.direccion}>{direccionConDepto}</Text>
         </View>
 
@@ -227,6 +236,15 @@ function Rotulo({ envio }: { envio: Envio }) {
           </View>
         </View>
       </View>
+
+      {/* Nota/Observación fuera del cuadro del rótulo */}
+      {obs ? (
+        <View style={styles.obsExternaBlock}>
+          <Text style={styles.obsExternaText}>
+            <Text style={{ fontWeight: 'bold' }}>Obs. interna:</Text> {obs}
+          </Text>
+        </View>
+      ) : null}
     </View>
   )
 }

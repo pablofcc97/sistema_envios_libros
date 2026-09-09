@@ -13,6 +13,9 @@ const DEPARTAMENTOS_PERU = [
   'Tumbes', 'Ucayali'
 ]
 
+type Courier = { id: string; nombre: string }
+type Producto = { id: string; nombre: string; nombreCorto?: string | null }
+
 export default function FormularioEditarEnvio({
   envio,
   couriers,
@@ -20,8 +23,8 @@ export default function FormularioEditarEnvio({
   onSuccess,
 }: {
   envio: any
-  couriers: any[]
-  productos: any[]
+  couriers: Courier[]
+  productos: Producto[]
   onSuccess: () => void
 }) {
   // Convertir la fecha ISO a formato YYYY-MM-DD para el input date
@@ -60,7 +63,7 @@ export default function FormularioEditarEnvio({
         <Link
           href={`/clientes/${envio.cliente.id}/editar`}
           target="_blank"
-          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg border border-slate-700 text-xs font-medium transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg border border-slate-700 text-xs font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
           <UserPen className="w-3.5 h-3.5 text-blue-400" />
           Editar cliente
@@ -124,7 +127,7 @@ export default function FormularioEditarEnvio({
               name="claveEnvio"
               defaultValue={envio.claveEnvio ?? ''}
               placeholder="Ej. 1234"
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm font-mono"
             />
           </div>
 
@@ -168,17 +171,17 @@ export default function FormularioEditarEnvio({
                   name={`producto_${p.id}`}
                   id={`edit_chk_${p.id}`}
                   defaultChecked={estaSeleccionado}
-                  className="w-4 h-4 rounded accent-blue-600 bg-slate-800 border-slate-700"
+                  className="w-4 h-4 rounded accent-blue-600 bg-slate-800 border-slate-700 cursor-pointer"
                 />
                 <label htmlFor={`edit_chk_${p.id}`} className="flex-1 text-xs text-slate-200 cursor-pointer">
-                  {p.nombre}
+                  {p.nombreCorto || p.nombre}
                 </label>
                 <input
                   type="number"
                   name={`cantidad_${p.id}`}
                   defaultValue={cantidadPrev}
                   min={1}
-                  className="w-14 bg-slate-800 border border-slate-700 text-slate-100 p-1 text-center rounded text-xs"
+                  className="w-14 bg-slate-800 border border-slate-700 text-slate-100 p-1 text-center rounded text-xs font-mono"
                 />
               </div>
             )
@@ -199,7 +202,7 @@ export default function FormularioEditarEnvio({
 
       <button
         type="submit"
-        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
+        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer"
       >
         Guardar Cambios
       </button>
