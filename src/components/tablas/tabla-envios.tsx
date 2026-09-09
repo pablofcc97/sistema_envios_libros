@@ -26,6 +26,7 @@ import FormularioEditarEnvio from '@/components/formularios/editar-envio-form'
 
 // Subcomponentes modulares
 import { BotonCopiar } from '@/components/ui/boton-copiar'
+import { BadgeEstado } from '@/components/ui/badge-estado'
 import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
 import { AccionesDropdown } from '@/components/tablas/comunes/acciones-dropdown'
@@ -325,18 +326,7 @@ export function TablaEnvios({
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className={`border-slate-700 ${
-                          envio.estado === 'registrado'
-                            ? 'bg-blue-950/40 text-blue-400 border-blue-800/60' 
-                            : envio.estado === 'rotulado'
-                            ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
-                            : 'bg-amber-950/40 text-amber-400 border-amber-800/60'
-                        }`}
-                      >
-                        {envio.estado}
-                      </Badge>
+                      <BadgeEstado estado={envio.estado}/>
 
                       {envio.estado === 'pendiente' && (
                         <Button

@@ -12,11 +12,10 @@ import {
 } from 'lucide-react'
 
 const navigation = [
-  { name: 'Resumen', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Envíos', href: '/envios', icon: Package },
   { name: 'Clientes', href: '/clientes', icon: Users },
   { name: 'Productos', href: '/productos', icon: BookOpen },
-  { name: 'Couriers', href: '/couriers', icon: Truck },
   { name: 'Configuración', href: '/configuracion', icon: Settings },
 ]
 

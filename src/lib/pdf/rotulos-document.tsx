@@ -66,17 +66,24 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   direccionBlock: {
-    paddingVertical: 8,
+    paddingVertical: 4,
     alignItems: 'center',
   },
+  referenciaText: {
+  fontSize: 13,
+  fontWeight: 'bold',
+  textAlign: 'center',
+  textTransform: 'uppercase',
+  color: '#000',
+  marginBottom: 6, // Margen ampliado para mayor separación visual
+},
   direccion: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     textAlign: 'center',
     textTransform: 'uppercase',
-    color: '#111',
-    lineHeight: 1.25,
-    marginTop: 4,
+    color: '#222',
+    lineHeight: 1.2,
   },
   footerRow: {
     flexDirection: 'row',
@@ -146,6 +153,7 @@ export type Envio = {
   dni: string
   celular: string
   direccion: string
+  referencia?: string
   departamento?: string
   courier: string
   libros: string
@@ -166,13 +174,14 @@ function getCourierStyle(courierNombre: string) {
 }
 
 function Rotulo({ envio }: { envio: Envio }) {
-  const direccionBase = (envio.direccion || 'AGENCIA SHALOM').trim().toUpperCase()
+  const direccionBase = (envio.direccion || '').trim().toUpperCase()
   const depto = (envio.departamento || '').trim().toUpperCase()
+  const ref = (envio.referencia || '').trim().toUpperCase()
 
-  const direccionCompleta =
-    depto && !direccionBase.includes(depto)
-      ? `${direccionBase} - ${depto}`
-      : direccionBase
+  // Concatenar SIEMPRE el departamento al final
+  const direccionConDepto = depto
+    ? `${direccionBase || 'AGENCIA SHALOM'} - ${depto}`
+    : direccionBase || 'AGENCIA SHALOM'
 
   const courierStyle = getCourierStyle(envio.courier)
 
@@ -195,9 +204,15 @@ function Rotulo({ envio }: { envio: Envio }) {
           </View>
         </View>
 
+        {/* Bloque de Dirección en 2 líneas */}
         <View style={styles.direccionBlock}>
           <Text style={styles.labelHeader}>Destino / Dirección / Agencia</Text>
-          <Text style={styles.direccion}>{direccionCompleta}</Text>
+
+          {/* Línea 1: Referencia/Agencia entre paréntesis */}
+          {ref ? <Text style={styles.referenciaText}>({ref})</Text> : null}
+
+          {/* Línea 2: Dirección base - Departamento */}
+          <Text style={styles.direccion}>{direccionConDepto}</Text>
         </View>
 
         <View style={styles.footerRow}>

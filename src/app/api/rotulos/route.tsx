@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     dni: e.cliente.dni,
     celular: e.cliente.celular,
     direccion: e.direccion || '',
+    referencia: e.referencia || '',
     departamento: e.departamento,
     courier: e.courier.nombre,
     libros: e.productos
