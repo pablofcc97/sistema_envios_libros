@@ -5,31 +5,23 @@ import { useRouter } from 'next/navigation'
 import { 
   FileSpreadsheet, 
   Trash2, 
-  Edit, 
-  MoreHorizontal, 
   Printer,
   X,
-  Tag
+  Tag,
+  SquarePen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { ModalMarcarRegistrado } from '@/components/modales/modal-marcar-registrado'
 import { eliminarEnvio, marcarComoRotulados } from '@/app/envios/actions'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import FormularioEditarEnvio from '@/components/formularios/editar-envio-form'
+import { DetalleEnvioSheet } from '@/components/envios/detalle-envio-sheet'
 
 // Subcomponentes modulares
 import { BotonCopiar } from '@/components/ui/boton-copiar'
 import { BadgeEstado } from '@/components/ui/badge-estado'
 import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
-import { AccionesDropdown } from '@/components/tablas/comunes/acciones-dropdown'
 
 // Custom Hook
 import { useSeleccionLote } from '@/hooks/use-seleccion-lote'
@@ -42,7 +34,7 @@ export function TablaEnvios({
   enviosIniciales: any[]
   couriers: any[]
   productos: any[]
-}){
+}) {
   const router = useRouter()
   const [busqueda, setBusqueda] = useState('')
   const [filtroFecha, setFiltroFecha] = useState('')
@@ -50,6 +42,8 @@ export function TablaEnvios({
   const [envioAEditar, setEnvioAEditar] = useState<any>(null)
   const [paginaActual, setPaginaActual] = useState(1)
   const [filasPorPagina, setFilasPorPagina] = useState(10)
+  const [envioSeleccionado, setEnvioSeleccionado] = useState<any | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   // 1. Filtrado dinámico
   const enviosFiltrados = enviosIniciales.filter((e) => {
@@ -71,7 +65,7 @@ export function TablaEnvios({
     paginaActual * filasPorPagina
   )
 
-  // 3. Custom Hook (se llama DESPUÉS de calcular filtrados y paginados)
+  // 3. Custom Hook
   const {
     seleccionados,
     todosPaginaSeleccionados,
@@ -79,7 +73,6 @@ export function TablaEnvios({
     toggleSeleccionFila,
     seleccionarTodosConsulta,
     limpiarSeleccion,
-    setSeleccionados,
   } = useSeleccionLote(enviosPaginados, enviosFiltrados)
 
   // Manejadores de cambios en filtros
@@ -109,6 +102,11 @@ export function TablaEnvios({
     const envio = enviosIniciales.find((e) => e.id === id)
     return envio?.estado === 'registrado'
   })
+
+  const handleVerDetalle = (envio: any) => {
+    setEnvioSeleccionado(envio)
+    setSheetOpen(true)
+  }
 
   const handleRotulosPendientesHoy = () => {
     const idsPendientesHoy = enviosRegistradosHoy.map((e) => e.id)
@@ -273,17 +271,22 @@ export function TablaEnvios({
                 </th>
                 <th className="p-3">Cliente</th>
                 <th className="p-3">Courier / Destino</th>
-                <th className="p-3">Clave</th>
+                <th className="p-3 text-center">Clave</th>
                 <th className="p-3">Libros</th>
-                <th className="p-3">Estado</th>
-                <th className="p-3">Fecha</th>
-                <th className="p-3 text-right">Acciones</th>
+                <th className="p-3 text-center">Estado</th>
+                <th className="p-3 text-center">Fecha</th>
+                <th className="p-3 text-center w-36">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
               {enviosPaginados.map((envio) => (
-                <tr key={envio.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="p-4 w-12 text-center">
+                <tr
+                  key={envio.id}
+                  onClick={() => handleVerDetalle(envio)}
+                  className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                >
+                  {/* Checkbox de selección */}
+                  <td className="p-4 w-12 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={seleccionados.includes(envio.id)}
@@ -291,14 +294,16 @@ export function TablaEnvios({
                       className="w-5 h-5 cursor-pointer rounded accent-blue-600 bg-slate-800 border-slate-700 hover:border-blue-500 transition-colors"
                     />
                   </td>
+
+                  {/* Cliente */}
                   <td className="p-4">
                     <div className="space-y-1">
-                      <div className="font-medium text-slate-100 flex items-center gap-1.5">
+                      <div className="font-medium text-slate-100 flex items-center gap-1.5 group-hover:text-blue-400 transition-colors">
                         <span>{envio.cliente.nombre}</span>
                         <BotonCopiar valor={envio.cliente.nombre} tooltip="Copiar Nombre" />
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                         <div className="inline-flex items-center gap-1 bg-slate-800/90 border border-slate-700/80 px-2 py-0.5 rounded text-xs font-mono font-bold text-blue-300">
                           <span>DNI: {envio.cliente.dni}</span>
                           <BotonCopiar valor={envio.cliente.dni} tooltip="Copiar DNI" />
@@ -311,21 +316,38 @@ export function TablaEnvios({
                       </div>
                     </div>
                   </td>
+
+                  {/* Courier / Destino (Con mayor separación vertical) */}
                   <td className="p-3">
-                    <span className="font-medium text-blue-400">{envio.courier.nombre}</span>
-                    <div className="text-xs text-slate-400 flex items-center">
-                      {envio.departamento} - {envio.direccion}
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-blue-400 uppercase text-xs tracking-wide">
+                        {envio.courier.nombre}
+                      </span>
+                      <span className="text-s text-slate-200 font-regular">
+                        {envio.departamento}
+                      </span>
                     </div>
                   </td>
-                  <td className="p-3 font-mono text-slate-200">
-                    {envio.claveEnvio} <BotonCopiar valor={envio.claveEnvio} />
+
+                  {/* Clave de envío */}
+                  <td className="p-3 text-center font-mono font-medium text-slate-300" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex items-center justify-center gap-1">
+                      <span>{envio.claveEnvio || '-'}</span>
+                      {envio.claveEnvio && <BotonCopiar valor={envio.claveEnvio} />}
+                    </div>
                   </td>
+
+                  {/* Libros / Productos */}
                   <td className="p-3 text-xs text-slate-300 max-w-xs truncate">
-                    {envio.productos.map((p: any) => `${p.producto.nombre} (x${p.cantidad})`).join(', ')}
+                    {envio.productos
+                      .map((p: any) => `${p.producto.nombreCorto || p.producto.nombre} (x${p.cantidad})`)
+                      .join(', ')}
                   </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <BadgeEstado estado={envio.estado}/>
+
+                  {/* Estado */}
+                  <td className="p-3 text-center">
+                    <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <BadgeEstado estado={envio.estado} />
 
                       {envio.estado === 'pendiente' && (
                         <Button
@@ -339,50 +361,63 @@ export function TablaEnvios({
                               claveEnvio: envio.claveEnvio,
                             })
                           }
-                          className="h-7 px-2 text-xs bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/50"
+                          className="h-7 px-2 text-xs bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/50 cursor-pointer"
                         >
                           Registrar
                         </Button>
                       )}
                     </div>
                   </td>
-                  <td className="p-3 text-xs text-slate-400 whitespace-nowrap">
+
+                  {/* Fecha */}
+                  <td className="p-3 text-center text-s font-mono text-slate-400 whitespace-nowrap">
                     {new Date(envio.createdAt).toLocaleDateString('es-PE')}
                   </td>
-                  <td className="p-3 text-right">
-                    <AccionesDropdown
-                      acciones={[
-                        {
-                          label: 'Imprimir Rótulo',
-                          icon: <Printer className="w-4 h-4 text-blue-400" />,
-                          onClick: () => window.open(`/api/rotulos?ids=${envio.id}`, '_blank'),
-                        },
-                        {
-                          label: 'Marcar como Rotulado',
-                          icon: <Tag className="w-4 h-4 text-indigo-400" />,
-                          onClick: async () => await marcarComoRotulados([envio.id]),
-                          hidden: envio.estado === 'rotulado',
-                        },
-                        {
-                          label: 'Editar Envío',
-                          icon: <Edit className="w-4 h-4 text-slate-400" />,
-                          onClick: () => setEnvioAEditar(envio),
-                        },
-                        {
-                          label: 'Eliminar Envío',
-                          icon: <Trash2 className="w-4 h-4" />,
-                          variant: 'destructive',
-                          onClick: async () => {
-                            if (confirm(`¿Estás seguro de eliminar el envío de ${envio.cliente.nombre}?`)) {
-                              await eliminarEnvio(envio.id)
-                            }
-                          },
-                        },
-                      ]}
-                    />
+
+                  {/* Acciones directas con Botones Cuadrados Sólidos */}
+                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1.5">
+                      {/* Imprimir */}
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={() => window.open(`/api/rotulos?ids=${envio.id}`, '_blank')}
+                        className="h-8 w-8 bg-blue-600/80 hover:bg-blue-500 text-white border border-blue-500/50 rounded-lg shadow-sm cursor-pointer transition-colors"
+                        title="Imprimir Rótulo"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </Button>
+
+                      {/* Editar */}
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={() => setEnvioAEditar(envio)}
+                        className="h-8 w-8 bg-amber-600/80 hover:bg-amber-500 text-white border border-amber-500/50 rounded-lg shadow-sm cursor-pointer transition-colors"
+                        title="Editar Envío"
+                      >
+                        <SquarePen className="w-4 h-4" />
+                      </Button>
+
+                      {/* Eliminar */}
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={async () => {
+                          if (confirm(`¿Estás seguro de eliminar el envío de ${envio.cliente.nombre}?`)) {
+                            await eliminarEnvio(envio.id)
+                          }
+                        }}
+                        className="h-8 w-8 bg-rose-600/80 hover:bg-rose-500 text-white border border-rose-500/50 rounded-lg shadow-sm cursor-pointer transition-colors"
+                        title="Eliminar Envío"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
+
               {enviosFiltrados.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-slate-500">
@@ -407,6 +442,7 @@ export function TablaEnvios({
         />
       </div>
 
+      {/* Modales y Paneles */}
       <ModalMarcarRegistrado
         envio={envioACompletar}
         open={!!envioACompletar}
@@ -430,6 +466,12 @@ export function TablaEnvios({
           )}
         </SheetContent>
       </Sheet>
+
+      <DetalleEnvioSheet
+        envio={envioSeleccionado}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
     </div>
   )
 }

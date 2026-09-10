@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { KpiCard } from '@/components/dashboard/kpi-card'
 import { UltimosEnviosTabla } from '@/components/dashboard/ultimos-envios-tabla'
 import { DistribuicionCouriers } from '@/components/dashboard/distribuicion-couriers'
+import { TopDepartamentosTabla } from '@/components/dashboard/top-departamentos-tabla'
 
 export const revalidate = 0
 
@@ -25,6 +26,7 @@ export default async function DashboardPage() {
     totalClientes,
     totalProductos,
     enviosPorCourierDb,
+    enviosPorDepartamentoDb,
     ultimosEnvios,
   ] = await Promise.all([
     prisma.envio.count(),
@@ -36,6 +38,16 @@ export default async function DashboardPage() {
       by: ['courierId'],
       _count: { id: true },
     }),
+    prisma.envio.groupBy({
+      by: ['departamento'],
+      _count: { id: true },
+      orderBy: {
+        _count: {
+          id: 'desc',
+        },
+      },
+      take: 5,
+    }),
     prisma.envio.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
@@ -43,7 +55,7 @@ export default async function DashboardPage() {
     }),
   ])
 
-  // Obtener nombres de couriers para el gráfico/desglose
+  // Map para distribución de couriers
   const couriersDb = await prisma.courier.findMany()
   const courierMap = new Map(couriersDb.map((c) => [c.id, c.nombre]))
 
@@ -51,6 +63,17 @@ export default async function DashboardPage() {
     nombre: courierMap.get(item.courierId) || 'Desconocido',
     total: item._count.id,
   }))
+
+  // Formato para Top Departamentos
+  const topDepartamentos = enviosPorDepartamentoDb.map((item) => {
+    const total = item._count.id
+    const porcentaje = totalEnvios > 0 ? Math.round((total / totalEnvios) * 100) : 0
+    return {
+      departamento: item.departamento || 'Sin especificar',
+      total,
+      porcentaje,
+    }
+  })
 
   return (
     <div className="space-y-8">
@@ -68,9 +91,9 @@ export default async function DashboardPage() {
         <div className="flex items-center gap-2">
           <Button
             asChild
-            className="bg-blue-600 hover:bg-blue-500 text-white gap-2 cursor-pointer"
+            className="bg-blue-600 hover:bg-blue-500 text-white gap-2 cursor-pointer font-medium"
           >
-            <Link href="/envios/nuevo">
+            <Link href="/envios?nuevo=true">
               <PlusCircle className="w-4 h-4" />
               Nuevo Envío
             </Link>
@@ -122,7 +145,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Sección Inferior: Gráfico/Distribución y Últimos Envíos */}
+      {/* Sección Inferior: Gráfico/Distribución, Top Departamentos y Últimos Envíos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-4">
@@ -134,8 +157,9 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div>
+        <div className="space-y-6">
           <DistribuicionCouriers datos={distribuicionCouriers} />
+          <TopDepartamentosTabla datos={topDepartamentos} />
         </div>
       </div>
     </div>

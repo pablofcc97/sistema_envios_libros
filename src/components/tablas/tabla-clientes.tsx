@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { FileSpreadsheet, Edit, Trash2, UserPlus } from 'lucide-react'
+import { FileSpreadsheet, SquarePen, Trash2, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { eliminarCliente } from '@/app/clientes/actions'
 import FormularioClienteForm from '@/components/formularios/formulario-cliente-form'
+import { DetalleClienteSheet } from '@/components/clientes/detalle-cliente-sheet'
 
 // Suite Modular
 import { BotonCopiar } from '@/components/ui/boton-copiar'
 import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
-import { AccionesDropdown } from '@/components/tablas/comunes/acciones-dropdown'
 import { useSeleccionLote } from '@/hooks/use-seleccion-lote'
 
 export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] }) {
@@ -20,6 +20,8 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
   const [modalCrearOpen, setModalCrearOpen] = useState(false)
   const [paginaActual, setPaginaActual] = useState(1)
   const [filasPorPagina, setFilasPorPagina] = useState(10)
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<any | null>(null)
+  const [sheetDetalleOpen, setSheetDetalleOpen] = useState(false)
 
   // 1. Filtro dinámico por Nombre, DNI, Celular o Email
   const clientesFiltrados = clientesIniciales.filter((c) => {
@@ -48,6 +50,11 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
     limpiarSeleccion,
   } = useSeleccionLote(clientesPaginados, clientesFiltrados)
 
+  const handleVerDetalle = (cliente: any) => {
+    setClienteSeleccionado(cliente)
+    setSheetDetalleOpen(true)
+  }
+
   const handleExportarExcel = () => {
     let url = '/api/exportar-clientes'
     if (seleccionados.length > 0) {
@@ -75,7 +82,7 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
           <Button
             onClick={() => setModalCrearOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white gap-2 text-sm cursor-pointer"
+            className="bg-blue-600 hover:bg-blue-500 text-white gap-2 text-sm cursor-pointer font-medium"
           >
             <UserPlus className="w-4 h-4" />
             Nuevo Cliente
@@ -130,13 +137,18 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
                 <th className="p-3">DNI / RUC</th>
                 <th className="p-3">Celular</th>
                 <th className="p-3">Correo</th>
-                <th className="p-3 text-right">Acciones</th>
+                <th className="p-3 text-center w-28">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
               {clientesPaginados.map((cliente) => (
-                <tr key={cliente.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="p-4 w-12 text-center">
+                <tr
+                  key={cliente.id}
+                  onClick={() => handleVerDetalle(cliente)}
+                  className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                >
+                  {/* Checkbox */}
+                  <td className="p-4 w-12 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={seleccionados.includes(cliente.id)}
@@ -144,42 +156,66 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
                       className="w-5 h-5 cursor-pointer rounded accent-blue-600 bg-slate-800 border-slate-700 hover:border-blue-500 transition-colors"
                     />
                   </td>
+
+                  {/* Nombre */}
                   <td className="p-4">
-                    <div className="font-medium text-slate-100 flex items-center gap-1.5">
+                    <div className="font-medium text-slate-100 flex items-center gap-1.5 group-hover:text-blue-400 transition-colors">
                       <span>{cliente.nombre}</span>
                       <BotonCopiar valor={cliente.nombre} tooltip="Copiar Nombre" />
                     </div>
                   </td>
-                  <td className="p-3 font-mono text-blue-300 font-bold">
-                    {cliente.dni} <BotonCopiar valor={cliente.dni} tooltip="Copiar DNI" />
+
+                  {/* DNI */}
+                  <td className="p-3 font-mono text-blue-300 font-bold" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex items-center gap-1">
+                      <span>{cliente.dni}</span>
+                      <BotonCopiar valor={cliente.dni} tooltip="Copiar DNI" />
+                    </div>
                   </td>
-                  <td className="p-3 font-mono text-slate-300">
-                    {cliente.celular} <BotonCopiar valor={cliente.celular} tooltip="Copiar Celular" />
+
+                  {/* Celular */}
+                  <td className="p-3 font-mono text-slate-300" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex items-center gap-1">
+                      <span>{cliente.celular}</span>
+                      <BotonCopiar valor={cliente.celular} tooltip="Copiar Celular" />
+                    </div>
                   </td>
+
+                  {/* Email */}
                   <td className="p-3 text-xs text-slate-400">
                     {cliente.email || '-'}
                   </td>
-                  <td className="p-3 text-right">
-                    <AccionesDropdown
-                      acciones={[
-                        {
-                          label: 'Editar Cliente',
-                          icon: <Edit className="w-4 h-4 text-slate-400" />,
-                          onClick: () => setClienteAEditar(cliente),
-                        },
-                        {
-                          label: 'Eliminar Cliente',
-                          icon: <Trash2 className="w-4 h-4" />,
-                          variant: 'destructive',
-                          onClick: async () => {
-                            if (confirm(`¿Eliminar al cliente ${cliente.nombre}?`)) {
-                              const res = await eliminarCliente(cliente.id)
-                              if (!res.success) alert(res.error)
-                            }
-                          },
-                        },
-                      ]}
-                    />
+
+                  {/* Acciones directas visibles */}
+                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1.5">
+                      {/* Editar */}
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={() => setClienteAEditar(cliente)}
+                        className="h-8 w-8 bg-amber-600/80 hover:bg-amber-500 text-white border border-amber-500/50 rounded-lg shadow-sm cursor-pointer transition-colors"
+                        title="Editar Cliente"
+                      >
+                        <SquarePen className="w-4 h-4" />
+                      </Button>
+
+                      {/* Eliminar */}
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={async () => {
+                          if (confirm(`¿Eliminar al cliente ${cliente.nombre}?`)) {
+                            const res = await eliminarCliente(cliente.id)
+                            if (!res.success) alert(res.error)
+                          }
+                        }}
+                        className="h-8 w-8 bg-rose-600/80 hover:bg-rose-500 text-white border border-rose-500/50 rounded-lg shadow-sm cursor-pointer transition-colors"
+                        title="Eliminar Cliente"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -230,6 +266,13 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Sheet de Detalle del Cliente */}
+      <DetalleClienteSheet
+        cliente={clienteSeleccionado}
+        open={sheetDetalleOpen}
+        onOpenChange={setSheetDetalleOpen}
+      />
     </div>
   )
 }

@@ -20,7 +20,7 @@ export default async function RootLayout({
   const metricas = await obtenerMetricasRapidas()
 
   return (
-    <html lang="es" className="dark">
+    <html lang="es" className="dark" suppressHydrationWarning>
       {/* h-screen y overflow-hidden en el body para evitar el scroll global de la ventana */}
       <body className={`${inter.className} bg-slate-950 text-slate-100 h-screen overflow-hidden flex antialiased`}>
         <AppSidebar />

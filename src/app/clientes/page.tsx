@@ -6,6 +6,19 @@ export const revalidate = 0
 export default async function ClientesPage() {
   const clientes = await prisma.cliente.findMany({
     orderBy: { nombre: 'asc' },
+    include: {
+      envios: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          courier: true,
+          productos: {
+            include: {
+              producto: true,
+            },
+          },
+        },
+      },
+    },
   })
 
   return (
