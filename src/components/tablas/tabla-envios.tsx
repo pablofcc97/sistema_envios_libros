@@ -214,7 +214,7 @@ export function TablaEnvios({
                 className="bg-blue-600 hover:bg-blue-500 text-white gap-2 text-sm cursor-pointer font-medium"
               >
                 <Printer className="w-4 h-4 text-blue-400" />
-                Rótulos pendientes de hoy
+                Rótulos pendientes de hoy ({enviosRegistradosHoy.length})
               </Button>
             </>
           )}
@@ -361,9 +361,22 @@ export function TablaEnvios({
                               claveEnvio: envio.claveEnvio,
                             })
                           }
-                          className="h-7 px-2 text-xs bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/50 cursor-pointer"
+                          className="h-7 px-2 text-xs bg-blue-950/60 hover:bg-blue-900 text-blue-300 border border-blue-800/50 cursor-pointer"
                         >
                           Registrar
+                        </Button>
+                      )}
+
+                      {envio.estado === 'registrado' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => {
+                            await marcarComoRotulados([envio.id])
+                          }}
+                          className="h-7 px-2 text-xs bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/50 cursor-pointer"
+                        >
+                          Rotular
                         </Button>
                       )}
                     </div>
