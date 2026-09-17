@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { crearEnvio } from '../../app/envios/actions'
+import { crearEnvio } from '@/app/envios/actions'
 
 const DEPARTAMENTOS_PERU = [
   'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca',
@@ -14,84 +14,130 @@ const DEPARTAMENTOS_PERU = [
 type Courier = { id: string; nombre: string }
 type Producto = { id: string; nombre: string; nombreCorto?: string | null }
 
+interface FormularioNuevoEnvioProps {
+  couriers: Courier[]
+  productos: Producto[]
+  courierPorDefectoId?: string | null
+  onSuccess?: () => void
+}
+
 export default function FormularioNuevoEnvio({
   couriers,
   productos,
-}: {
-  couriers: Courier[]
-  productos: Producto[]
-}) {
-  const shalomCourier = couriers.find((c) => c.nombre.toUpperCase().includes('SHALOM'))
-
+  courierPorDefectoId,
+  onSuccess,
+}: FormularioNuevoEnvioProps) {
+  const [nombre, setNombre] = useState('')
   const [dni, setDni] = useState('')
   const [celular, setCelular] = useState('')
+  const [cargando, setCargando] = useState(false)
 
-  // Función para limpiar espacios, guiones y caracteres no numéricos
+  const defaultCourierId =
+    courierPorDefectoId ||
+    couriers.find((c) => c.nombre.toUpperCase().includes('SHALOM'))?.id ||
+    couriers[0]?.id ||
+    ''
+
   const limpiarTextoNumerico = (texto: string, maxLen: number) => {
     return texto.replace(/\D/g, '').slice(0, maxLen)
   }
 
-  const handleDniChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDni(limpiarTextoNumerico(e.target.value, 8))
-  }
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
 
-  const handleCelularChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCelular(limpiarTextoNumerico(e.target.value, 9))
+    // 1. Validaciones previas
+    if (dni.length !== 8) {
+      alert('El DNI debe contener exactamente 8 dígitos.')
+      return
+    }
+
+    if (celular.length !== 9) {
+      alert('El número de celular debe contener exactamente 9 dígitos.')
+      return
+    }
+
+    setCargando(true)
+
+    // 2. Sanitización (Trim de campos de texto)
+    const formData = new FormData(e.currentTarget)
+    
+    formData.set('nombre', nombre.trim().replace(/\s+/g, ' '))
+    formData.set('dni', dni)
+    formData.set('celular', celular)
+
+    const email = formData.get('email') as string
+    if (email) formData.set('email', email.trim().toLowerCase())
+
+    const claveEnvio = formData.get('claveEnvio') as string
+    if (claveEnvio) formData.set('claveEnvio', claveEnvio.trim())
+
+    const direccion = formData.get('direccion') as string
+    if (direccion) formData.set('direccion', direccion.trim())
+
+    const observaciones = formData.get('observaciones') as string
+    if (observaciones) formData.set('observaciones', observaciones.trim())
+
+    // 3. Ejecución de Server Action
+    await crearEnvio(formData)
+
+    setCargando(false)
+    if (onSuccess) {
+      onSuccess()
+    }
   }
 
   return (
-    <form action={crearEnvio} className="space-y-4 text-slate-100">
-      
-      {/* Cliente */}
+    <form onSubmit={handleSubmit} className="space-y-4 text-slate-100">
+      {/* Sección Cliente */}
       <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <h3 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-2">
           Cliente
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Nombre primero */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Nombre *</label>
             <input
               name="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
               placeholder="Nombre del cliente"
               required
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* DNI */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">DNI * (8 dígitos)</label>
             <input
               name="dni"
               value={dni}
-              onChange={handleDniChange}
+              onChange={(e) => setDni(limpiarTextoNumerico(e.target.value, 8))}
               placeholder="70123456"
               required
               minLength={8}
+              maxLength={8}
               pattern="\d{8}"
               title="El DNI debe tener exactamente 8 dígitos"
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
           </div>
 
-          {/* Celular */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Celular * (9 dígitos)</label>
             <input
               name="celular"
               value={celular}
-              onChange={handleCelularChange}
+              onChange={(e) => setCelular(limpiarTextoNumerico(e.target.value, 9))}
               placeholder="987654321"
               required
               minLength={9}
+              maxLength={9}
               pattern="\d{9}"
               title="El celular debe tener exactamente 9 dígitos"
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Email</label>
             <input
@@ -104,7 +150,7 @@ export default function FormularioNuevoEnvio({
         </div>
       </div>
 
-      {/* Envío */}
+      {/* Sección Envío */}
       <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <h3 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-2">
           Envío
@@ -114,28 +160,29 @@ export default function FormularioNuevoEnvio({
             <label className="block text-xs text-slate-400 mb-1">Courier *</label>
             <select
               name="courierId"
-              defaultValue={shalomCourier?.id || ''}
+              defaultValue={defaultCourierId}
               required
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="">Selecciona courier</option>
+              <option value="" className="bg-slate-900 text-slate-400">Selecciona courier</option>
               {couriers.map((c) => (
-                <option key={c.id} value={c.id} className="bg-slate-900">
+                <option key={c.id} value={c.id} className="bg-slate-900 text-slate-100">
                   {c.nombre}
                 </option>
               ))}
             </select>
           </div>
+
           <div>
             <label className="block text-xs text-slate-400 mb-1">Departamento *</label>
             <select
               name="departamento"
               required
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="">Selecciona departamento</option>
+              <option value="" className="bg-slate-900 text-slate-400">Selecciona departamento</option>
               {DEPARTAMENTOS_PERU.map((dep) => (
-                <option key={dep} value={dep} className="bg-slate-900">
+                <option key={dep} value={dep} className="bg-slate-900 text-slate-100">
                   {dep}
                 </option>
               ))}
@@ -147,11 +194,11 @@ export default function FormularioNuevoEnvio({
             <select
               name="referencia"
               defaultValue="Agencia SHALOM"
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="Agencia SHALOM">Agencia SHALOM</option>
-              <option value="Agencia OLVA">Agencia OLVA</option>
-              <option value="Domicilio del cliente">Domicilio del cliente</option>
+              <option value="Agencia SHALOM" className="bg-slate-900 text-slate-100">Agencia SHALOM</option>
+              <option value="Agencia OLVA" className="bg-slate-900 text-slate-100">Agencia OLVA</option>
+              <option value="Domicilio del cliente" className="bg-slate-900 text-slate-100">Domicilio del cliente</option>
             </select>
           </div>
 
@@ -175,7 +222,7 @@ export default function FormularioNuevoEnvio({
         </div>
       </div>
 
-      {/* Libros / Productos */}
+      {/* Sección Libros / Productos */}
       <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <h3 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-2">
           Libros
@@ -220,9 +267,10 @@ export default function FormularioNuevoEnvio({
 
       <button
         type="submit"
-        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-600/20 text-sm cursor-pointer"
+        disabled={cargando}
+        className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-600/20 text-sm cursor-pointer disabled:cursor-not-allowed"
       >
-        Guardar Envío Pendiente
+        {cargando ? 'Guardando...' : 'Guardar Envío Pendiente'}
       </button>
     </form>
   )

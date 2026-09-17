@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect} from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { FileSpreadsheet, SquarePen, Trash2, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -15,8 +16,11 @@ import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
 import { useSeleccionLote } from '@/hooks/use-seleccion-lote'
 
 export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] }) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   const [busqueda, setBusqueda] = useState('')
-  const [clienteAEditar, setClienteAEditar] = useState<any>(null)
+  const [clienteAEditar, setClienteAEditar] = useState<any | null>(null)
   const [modalCrearOpen, setModalCrearOpen] = useState(false)
   const [paginaActual, setPaginaActual] = useState(1)
   const [filasPorPagina, setFilasPorPagina] = useState(10)
@@ -62,6 +66,26 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
     }
     window.open(url, '_blank')
   }
+
+  const handleCerrarModalEdicion = (open: boolean) => {
+    if (!open) {
+      setClienteAEditar(null)
+      // Limpia la URL si contenía ?editar=[id]
+      if (searchParams.get('editar')) {
+        router.replace('/clientes', { scroll: false })
+      }
+    }
+  }
+
+  useEffect(() => {
+    const clienteIdAEditar = searchParams.get('editar')
+    if (clienteIdAEditar) {
+      const clienteEncontrado = clientesIniciales.find((c) => c.id === clienteIdAEditar)
+      if (clienteEncontrado) {
+        setClienteAEditar(clienteEncontrado)
+      }
+    }
+  }, [searchParams, clientesIniciales])
 
   return (
     <div className="space-y-4">
@@ -253,7 +277,7 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
       </Sheet>
 
       {/* Sheet para Editar Cliente */}
-      <Sheet open={!!clienteAEditar} onOpenChange={(open) => !open && setClienteAEditar(null)}>
+      <Sheet open={!!clienteAEditar} onOpenChange={handleCerrarModalEdicion}>
         <SheetContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-md p-6 overflow-y-auto">
           <SheetHeader className="pb-3 border-b border-slate-800">
             <SheetTitle className="text-xl font-bold text-white">Editar Cliente</SheetTitle>

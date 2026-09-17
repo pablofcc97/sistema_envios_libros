@@ -17,6 +17,8 @@ export default async function EnviosPage() {
 
   const couriers = await prisma.courier.findMany({ orderBy: { nombre: 'asc' } })
   const productos = await prisma.producto.findMany({ orderBy: { nombre: 'asc' } })
+  const config = await prisma.configuracion.findUnique({ where: { id: 'global' } })
+  
 
   return (
     <div className="space-y-6 text-slate-100">
@@ -31,7 +33,11 @@ export default async function EnviosPage() {
 
         {/* Botón y Sheet controlado client-side */}
         <Suspense fallback={null}>
-          <BotonNuevoEnvio couriers={couriers} productos={productos} />
+          <BotonNuevoEnvio 
+            couriers={couriers} 
+            productos={productos} 
+            courierPorDefectoId={config?.courierPorDefectoId} 
+          />
         </Suspense>
       </div>
 

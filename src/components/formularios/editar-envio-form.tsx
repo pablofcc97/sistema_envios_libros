@@ -1,9 +1,9 @@
 'use client'
 
-import { actualizarEnvioCompleto } from '../../app/envios/actions'
+import { useState } from 'react'
 import Link from 'next/link'
 import { UserPen } from 'lucide-react'
-import { useState } from 'react'
+import { actualizarEnvioCompleto } from '@/app/envios/actions'
 
 const DEPARTAMENTOS_PERU = [
   'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca',
@@ -16,35 +16,54 @@ const DEPARTAMENTOS_PERU = [
 type Courier = { id: string; nombre: string }
 type Producto = { id: string; nombre: string; nombreCorto?: string | null }
 
+interface FormularioEditarEnvioProps {
+  envio: any
+  couriers: Courier[]
+  productos: Producto[]
+  onSuccess: () => void
+}
+
 export default function FormularioEditarEnvio({
   envio,
   couriers,
   productos,
   onSuccess,
-}: {
-  envio: any
-  couriers: Courier[]
-  productos: Producto[]
-  onSuccess: () => void
-}) {
-  // Convertir la fecha ISO a formato YYYY-MM-DD para el input date
+}: FormularioEditarEnvioProps) {
   const fechaInicial = envio.createdAt
     ? new Date(envio.createdAt).toISOString().split('T')[0]
     : new Date().toISOString().split('T')[0]
 
   const [fechaEnvio, setFechaEnvio] = useState(fechaInicial)
+  const [cargando, setCargando] = useState(false)
 
   const productosSeleccionadosMap = new Map(
     envio.productos.map((p: any) => [p.productoId, p.cantidad])
   )
 
-  async function handleSubmit(formData: FormData) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setCargando(true)
+
+    const formData = new FormData(e.currentTarget)
+
+    // Sanitización (.trim()) de campos de texto editables
+    const claveEnvio = formData.get('claveEnvio') as string
+    if (claveEnvio) formData.set('claveEnvio', claveEnvio.trim())
+
+    const direccion = formData.get('direccion') as string
+    if (direccion) formData.set('direccion', direccion.trim())
+
+    const observaciones = formData.get('observaciones') as string
+    if (observaciones) formData.set('observaciones', observaciones.trim())
+
     await actualizarEnvioCompleto(envio.id, formData)
+
+    setCargando(false)
     onSuccess()
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4 text-slate-100">
+    <form onSubmit={handleSubmit} className="space-y-4 text-slate-100">
       
       {/* Información del Cliente (Solo Lectura) */}
       <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex flex-col gap-3 text-xs text-slate-300">
@@ -61,7 +80,7 @@ export default function FormularioEditarEnvio({
         </div>
 
         <Link
-          href={`/clientes/${envio.cliente.id}/editar`}
+          href={`/clientes?editar=${envio.cliente.id}`}
           target="_blank"
           className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg border border-slate-700 text-xs font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
@@ -70,7 +89,7 @@ export default function FormularioEditarEnvio({
         </Link>
       </div>
 
-      {/* Detalle de Envío */}
+      {/* Detalles de Envío */}
       <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
         <h3 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-2">
           Detalles de Envío
@@ -82,10 +101,10 @@ export default function FormularioEditarEnvio({
               name="courierId"
               defaultValue={envio.courierId}
               required
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               {couriers.map((c) => (
-                <option key={c.id} value={c.id} className="bg-slate-900">
+                <option key={c.id} value={c.id} className="bg-slate-900 text-slate-100">
                   {c.nombre}
                 </option>
               ))}
@@ -98,10 +117,10 @@ export default function FormularioEditarEnvio({
               name="departamento"
               defaultValue={envio.departamento}
               required
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               {DEPARTAMENTOS_PERU.map((dep) => (
-                <option key={dep} value={dep} className="bg-slate-900">
+                <option key={dep} value={dep} className="bg-slate-900 text-slate-100">
                   {dep}
                 </option>
               ))}
@@ -113,11 +132,11 @@ export default function FormularioEditarEnvio({
             <select
               name="referencia"
               defaultValue={envio.referencia ?? 'Agencia SHALOM'}
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="Agencia SHALOM">Agencia SHALOM</option>
-              <option value="Agencia OLVA">Agencia OLVA</option>
-              <option value="Domicilio del cliente">Domicilio del cliente</option>
+              <option value="Agencia SHALOM" className="bg-slate-900 text-slate-100">Agencia SHALOM</option>
+              <option value="Agencia OLVA" className="bg-slate-900 text-slate-100">Agencia OLVA</option>
+              <option value="Domicilio del cliente" className="bg-slate-900 text-slate-100">Domicilio del cliente</option>
             </select>
           </div>
 
@@ -127,7 +146,7 @@ export default function FormularioEditarEnvio({
               name="claveEnvio"
               defaultValue={envio.claveEnvio ?? ''}
               placeholder="Ej. 1234"
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm font-mono"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -137,9 +156,10 @@ export default function FormularioEditarEnvio({
               name="direccion"
               defaultValue={envio.direccion ?? ''}
               placeholder="Av. Principal 123 o Agencia Shalom"
-              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm"
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div className="sm:col-span-2">
             <label className="block text-xs text-slate-400 mb-1">Fecha de Registro / Envío *</label>
             <input
@@ -196,15 +216,16 @@ export default function FormularioEditarEnvio({
           name="observaciones"
           defaultValue={envio.observaciones ?? ''}
           rows={2}
-          className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm resize-none"
+          className="w-full bg-slate-800 border border-slate-700 text-slate-100 p-2 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <button
         type="submit"
-        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer"
+        disabled={cargando}
+        className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
       >
-        Guardar Cambios
+        {cargando ? 'Guardando Cambios...' : 'Guardar Cambios'}
       </button>
     </form>
   )

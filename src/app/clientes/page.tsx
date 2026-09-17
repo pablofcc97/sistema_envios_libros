@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import { TablaClientes } from '@/components/tablas/tabla-clientes'
 
@@ -32,7 +33,9 @@ export default async function ClientesPage() {
         </p>
       </div>
 
-      <TablaClientes clientesIniciales={clientes} />
+      <Suspense fallback={null}>
+        <TablaClientes clientesIniciales={clientes} />
+      </Suspense>
     </div>
   )
 }

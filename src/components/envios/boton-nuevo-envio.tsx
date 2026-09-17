@@ -10,9 +10,11 @@ import FormularioNuevoEnvio from '@/components/formularios/nuevo-envio-form'
 export function BotonNuevoEnvio({
   couriers,
   productos,
+  courierPorDefectoId,
 }: {
   couriers: any[]
   productos: any[]
+  courierPorDefectoId?: string | null
 }) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -49,6 +51,7 @@ export function BotonNuevoEnvio({
         <FormularioNuevoEnvio
           couriers={couriers}
           productos={productos}
+          courierPorDefectoId={courierPorDefectoId}
           onSuccess={() => handleOpenChange(false)}
         />
       </SheetContent>

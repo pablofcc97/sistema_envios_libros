@@ -376,7 +376,7 @@ export function TablaEnvios({
                           }}
                           className="h-7 px-2 text-xs bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/50 cursor-pointer"
                         >
-                          Rotular
+                          Rotulado
                         </Button>
                       )}
                     </div>

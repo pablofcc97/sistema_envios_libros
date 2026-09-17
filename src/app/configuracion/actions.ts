@@ -48,3 +48,19 @@ export async function eliminarCourier(id: string) {
     return { success: false, error: 'Error al eliminar el courier.' }
   }
 }
+
+export async function guardarCourierPorDefecto(courierId: string) {
+  try {
+    await prisma.configuracion.upsert({
+      where: { id: 'global' },
+      update: { courierPorDefectoId: courierId },
+      create: { id: 'global', courierPorDefectoId: courierId },
+    })
+
+    revalidatePath('/envios')
+    revalidatePath('/configuracion')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Error al guardar la configuración.' }
+  }
+}
