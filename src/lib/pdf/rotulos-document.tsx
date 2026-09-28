@@ -11,12 +11,12 @@ const styles = StyleSheet.create({
     borderBottomColor: '#aaa',
     borderBottomStyle: 'dashed',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 2,
     justifyContent: 'space-between',
   },
   card: {
     borderWidth: 2,
-    borderColor: '#000',
+    borderColor: '#474747',
     borderRadius: 8,
     padding: 12,
     flex: 1,
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   nombre: {
-    fontSize: 18,
+    fontSize: 21,
     fontWeight: 'bold',
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -55,14 +55,14 @@ const styles = StyleSheet.create({
   dniBox: { flex: 1, alignItems: 'flex-start' },
   celularBox: { flex: 1, alignItems: 'flex-end' },
   bigDataLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 'bold',
     color: '#555',
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   bigDataValue: {
-    fontSize: 24,
+    fontSize: 27,
     fontWeight: 'bold',
     color: '#000',
   },
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   referenciaText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   direccion: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
     textTransform: 'uppercase',

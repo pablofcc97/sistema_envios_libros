@@ -28,12 +28,36 @@ export default function FormularioClienteForm({
   const [celular, setCelular] = useState(cliente?.celular || '')
   const [email, setEmail] = useState(cliente?.email || '')
 
+  // Elimina cualquier espacio (inicio, medio, final), guiones y letras, recortando a maxLen
+  const limpiarTextoNumerico = (texto: string, maxLen: number) => {
+    return texto.replace(/\D/g, '').slice(0, maxLen)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setCargando(true)
     setError('')
 
-    const payload = { nombre, dni, celular, email }
+    const dniLimpio = limpiarTextoNumerico(dni, 8)
+    const celularLimpio = limpiarTextoNumerico(celular, 9)
+
+    if (dniLimpio.length !== 8) {
+      setError('El DNI debe tener exactamente 8 dígitos.')
+      return
+    }
+
+    if (celularLimpio.length !== 9) {
+      setError('El número de celular debe tener exactamente 9 dígitos.')
+      return
+    }
+
+    setCargando(true)
+
+    const payload = {
+      nombre: nombre.trim().replace(/\s+/g, ' '),
+      dni: dniLimpio,
+      celular: celularLimpio,
+      email: email.trim().toLowerCase(),
+    }
 
     const res = cliente
       ? await actualizarCliente(cliente.id, payload)
@@ -72,25 +96,26 @@ export default function FormularioClienteForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            DNI / RUC *
+            DNI * (8 dígitos)
           </label>
           <Input
             required
             value={dni}
-            onChange={(e) => setDni(e.target.value)}
+            onChange={(e) => setDni(limpiarTextoNumerico(e.target.value, 8))}
             placeholder="72723047"
+            maxLength={8}
             className="bg-slate-900 border-slate-800 text-slate-100 font-mono"
           />
         </div>
 
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Celular *
+            Celular * (9 dígitos)
           </label>
           <Input
             required
             value={celular}
-            onChange={(e) => setCelular(e.target.value)}
+            onChange={(e) => setCelular(limpiarTextoNumerico(e.target.value, 9))}
             placeholder="955870376"
             className="bg-slate-900 border-slate-800 text-slate-100 font-mono"
           />
@@ -114,7 +139,7 @@ export default function FormularioClienteForm({
         <Button
           type="submit"
           disabled={cargando}
-          className="bg-blue-600 hover:bg-blue-500 text-white w-full cursor-pointer"
+          className="bg-blue-600 hover:bg-blue-500 text-white w-full cursor-pointer disabled:bg-blue-800 disabled:cursor-not-allowed"
         >
           {cargando ? 'Guardando...' : cliente ? 'Guardar Cambios' : 'Crear Cliente'}
         </Button>

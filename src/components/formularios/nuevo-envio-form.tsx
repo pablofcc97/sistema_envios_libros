@@ -38,6 +38,7 @@ export default function FormularioNuevoEnvio({
     couriers[0]?.id ||
     ''
 
+  // Elimina cualquier carácter que no sea número (espacios, guiones, letras)
   const limpiarTextoNumerico = (texto: string, maxLen: number) => {
     return texto.replace(/\D/g, '').slice(0, maxLen)
   }
@@ -45,25 +46,27 @@ export default function FormularioNuevoEnvio({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    // 1. Validaciones previas
-    if (dni.length !== 8) {
+    const dniLimpio = limpiarTextoNumerico(dni, 8)
+    const celularLimpio = limpiarTextoNumerico(celular, 9)
+
+    // Validaciones
+    if (dniLimpio.length !== 8) {
       alert('El DNI debe contener exactamente 8 dígitos.')
       return
     }
 
-    if (celular.length !== 9) {
+    if (celularLimpio.length !== 9) {
       alert('El número de celular debe contener exactamente 9 dígitos.')
       return
     }
 
     setCargando(true)
 
-    // 2. Sanitización (Trim de campos de texto)
     const formData = new FormData(e.currentTarget)
     
     formData.set('nombre', nombre.trim().replace(/\s+/g, ' '))
-    formData.set('dni', dni)
-    formData.set('celular', celular)
+    formData.set('dni', dniLimpio)
+    formData.set('celular', celularLimpio)
 
     const email = formData.get('email') as string
     if (email) formData.set('email', email.trim().toLowerCase())
@@ -77,7 +80,6 @@ export default function FormularioNuevoEnvio({
     const observaciones = formData.get('observaciones') as string
     if (observaciones) formData.set('observaciones', observaciones.trim())
 
-    // 3. Ejecución de Server Action
     await crearEnvio(formData)
 
     setCargando(false)
@@ -114,10 +116,6 @@ export default function FormularioNuevoEnvio({
               onChange={(e) => setDni(limpiarTextoNumerico(e.target.value, 8))}
               placeholder="70123456"
               required
-              minLength={8}
-              maxLength={8}
-              pattern="\d{8}"
-              title="El DNI debe tener exactamente 8 dígitos"
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
           </div>
@@ -130,10 +128,6 @@ export default function FormularioNuevoEnvio({
               onChange={(e) => setCelular(limpiarTextoNumerico(e.target.value, 9))}
               placeholder="987654321"
               required
-              minLength={9}
-              maxLength={9}
-              pattern="\d{9}"
-              title="El celular debe tener exactamente 9 dígitos"
               className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
           </div>

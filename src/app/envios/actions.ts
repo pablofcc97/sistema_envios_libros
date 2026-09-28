@@ -2,7 +2,6 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 
 export async function crearEnvio(formData: FormData) {
   const dni = (formData.get('dni') as string)?.trim()
@@ -27,7 +26,6 @@ export async function crearEnvio(formData: FormData) {
   const observacionesRaw = (formData.get('observaciones') as string)?.trim()
   const observaciones = observacionesRaw ? observacionesRaw : null
 
-  // Clave y dirección ya NO son obligatorias para crear
   if (!dni || !nombre || !celular || !departamento || !courierId) {
     throw new Error('Completa los campos obligatorios del cliente, departamento y courier.')
   }
@@ -69,8 +67,8 @@ export async function crearEnvio(formData: FormData) {
     },
   })
 
+  // Revalida los datos en segundo plano sin interrumpir la promesa del cliente
   revalidatePath('/envios')
-  redirect('/envios')
 }
 
 // Acción para actualizar datos de envío o marcarlo como 'registrado'
