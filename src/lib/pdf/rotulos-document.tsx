@@ -170,20 +170,32 @@ export type Envio = {
   departamento?: string
   observaciones?: string
   courier: string
+  colorCourier?: string | null
   libros: string
   productosDetalle?: ProductoDetalle[]
 }
 
-function getCourierStyle(courierNombre: string) {
-  const nombre = (courierNombre || '').toUpperCase()
+function getCourierStyle(colorCourier?: string | null) {
+  const colorValido = /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(colorCourier || '')
+  if (!colorValido || !colorCourier) {
+    return { backgroundColor: '#000000', color: '#FFFFFF' }
+  }
 
-  if (nombre.includes('SHALOM')) {
-    return { backgroundColor: '#EE2A2F', color: '#FFFFFF' }
+  const colorNormalizado = colorCourier.length === 4
+    ? `#${colorCourier.slice(1).split('').map((canal) => canal + canal).join('')}`
+    : colorCourier
+  const canales = colorNormalizado.slice(1).match(/.{2}/g)!.map((canal) => parseInt(canal, 16) / 255)
+  const canalesLineales = canales.map((canal) => (
+    canal <= 0.04045 ? canal / 12.92 : ((canal + 0.055) / 1.055) ** 2.4
+  ))
+  const luminancia = 0.2126 * canalesLineales[0] + 0.7152 * canalesLineales[1] + 0.0722 * canalesLineales[2]
+  const contrasteNegro = (luminancia + 0.05) / 0.05
+  const contrasteBlanco = 1.05 / (luminancia + 0.05)
+
+  return {
+    backgroundColor: colorNormalizado,
+    color: contrasteNegro >= contrasteBlanco ? '#000000' : '#FFFFFF',
   }
-  if (nombre.includes('OLVA')) {
-    return { backgroundColor: '#F9B52F', color: '#000000' }
-  }
-  return { backgroundColor: '#000000', color: '#FFFFFF' }
 }
 
 function Rotulo({ envio }: { envio: Envio }) {
@@ -196,7 +208,7 @@ function Rotulo({ envio }: { envio: Envio }) {
     ? `${direccionBase || 'AGENCIA SHALOM'} - ${depto}`
     : direccionBase || 'AGENCIA SHALOM'
 
-  const courierStyle = getCourierStyle(envio.courier)
+  const courierStyle = getCourierStyle(envio.colorCourier)
 
   return (
     <View style={styles.mitad}>
@@ -251,7 +263,7 @@ function Rotulo({ envio }: { envio: Envio }) {
 
 export function RotulosDocument({ envios }: { envios: Envio[] }) {
   const conteoProductos = new Map<string, number>()
-  let totalPaquetes = envios.length
+  const totalPaquetes = envios.length
 
   envios.forEach((e) => {
     e.productosDetalle?.forEach((p) => {

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 export async function crearProducto(data: {
   nombre: string
   nombreCorto?: string
+  destacado?: boolean
   precio?: number
   anio?: number
 }) {
@@ -14,6 +15,7 @@ export async function crearProducto(data: {
       data: {
         nombre: data.nombre.trim(),
         nombreCorto: data.nombreCorto?.trim() || null,
+        destacado: data.destacado ?? false,
         precio: data.precio || 0,
         anio: data.anio || new Date().getFullYear(),
       },
@@ -30,6 +32,7 @@ export async function actualizarProducto(
   data: {
     nombre: string
     nombreCorto?: string
+    destacado?: boolean
     precio?: number
     anio?: number
   }
@@ -40,6 +43,7 @@ export async function actualizarProducto(
       data: {
         nombre: data.nombre.trim(),
         nombreCorto: data.nombreCorto?.trim() || null,
+        destacado: data.destacado ?? false,
         precio: data.precio || 0,
         anio: data.anio || new Date().getFullYear(),
       },

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { 
   FileSpreadsheet, 
   Trash2, 
@@ -14,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { ModalMarcarRegistrado } from '@/components/modales/modal-marcar-registrado'
 import { eliminarEnvio, marcarComoRotulados } from '@/app/envios/actions'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import FormularioEditarEnvio from '@/components/formularios/editar-envio-form'
+import { FormularioEnvioForm } from '@/components/formularios/formulario-envio-form'
 import { DetalleEnvioSheet } from '@/components/envios/detalle-envio-sheet'
 
 // Subcomponentes modulares
@@ -35,15 +34,22 @@ export function TablaEnvios({
   couriers: any[]
   productos: any[]
 }) {
-  const router = useRouter()
   const [busqueda, setBusqueda] = useState('')
   const [filtroFecha, setFiltroFecha] = useState('')
+  const [filtroDepartamento, setFiltroDepartamento] = useState('')
+  const [soloConObservaciones, setSoloConObservaciones] = useState(false)
   const [envioACompletar, setEnvioACompletar] = useState<any>(null)
   const [envioAEditar, setEnvioAEditar] = useState<any>(null)
   const [paginaActual, setPaginaActual] = useState(1)
   const [filasPorPagina, setFilasPorPagina] = useState(10)
   const [envioSeleccionado, setEnvioSeleccionado] = useState<any | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  const departamentosDisponibles = Array.from(new Set(
+    enviosIniciales
+      .map((envio) => envio.departamento?.trim())
+      .filter((departamento): departamento is string => Boolean(departamento)),
+  )).sort((a, b) => a.localeCompare(b, 'es'))
 
   // 1. Filtrado dinámico
   const enviosFiltrados = enviosIniciales.filter((e) => {
@@ -55,8 +61,14 @@ export function TablaEnvios({
 
     const fechaEnvio = new Date(e.createdAt).toISOString().split('T')[0]
     const coincideFecha = filtroFecha ? fechaEnvio === filtroFecha : true
+    const coincideDepartamento = filtroDepartamento
+      ? e.departamento === filtroDepartamento
+      : true
+    const coincideObservaciones = soloConObservaciones
+      ? Boolean(e.observaciones?.trim())
+      : true
 
-    return coincideBusqueda && coincideFecha
+    return coincideBusqueda && coincideFecha && coincideDepartamento && coincideObservaciones
   })
 
   // 2. Paginación
@@ -84,6 +96,18 @@ export function TablaEnvios({
 
   const handleLimpiarFecha = () => {
     setFiltroFecha('')
+    setPaginaActual(1)
+    limpiarSeleccion()
+  }
+
+  const handleDepartamentoChange = (departamento: string) => {
+    setFiltroDepartamento(departamento)
+    setPaginaActual(1)
+    limpiarSeleccion()
+  }
+
+  const handleObservacionesChange = (activo: boolean) => {
+    setSoloConObservaciones(activo)
     setPaginaActual(1)
     limpiarSeleccion()
   }
@@ -138,7 +162,7 @@ export function TablaEnvios({
     <div className="space-y-4">
       {/* Controles de Búsqueda y Botones */}
       <div className="bg-slate-900 p-4 border border-slate-800 rounded-xl flex flex-col md:flex-row gap-3 items-center justify-between">
-        <div className="flex flex-1 flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div className="flex flex-1 flex-col sm:flex-row sm:flex-wrap gap-3 w-full md:w-auto">
           <BarraBusqueda
             value={busqueda}
             onChange={(valor) => {
@@ -167,6 +191,32 @@ export function TablaEnvios({
               </button>
             ) : null}
           </div>
+
+          <label className="flex items-center gap-2 rounded-lg border border-slate-700/80 bg-slate-800 px-3 py-2 text-sm text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={soloConObservaciones}
+              onChange={(e) => handleObservacionesChange(e.target.checked)}
+              className="h-4 w-4 rounded accent-blue-600"
+            />
+            Con observaciones
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-slate-400">
+            Región
+            <select
+              id="filtro-departamento-envios"
+              aria-label="Filtrar envíos por región"
+              value={filtroDepartamento}
+              onChange={(e) => handleDepartamentoChange(e.target.value)}
+              className="bg-slate-900 border border-slate-700/80 text-slate-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="">Todas</option>
+              {departamentosDisponibles.map((departamento) => (
+                <option key={departamento} value={departamento}>{departamento}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -320,7 +370,8 @@ export function TablaEnvios({
                   {/* Courier / Destino (Con mayor separación vertical) */}
                   <td className="p-3">
                     <div className="flex flex-col gap-1">
-                      <span className="font-bold text-blue-400 uppercase text-xs tracking-wide">
+                      <span className="font-bold uppercase text-xs tracking-wide flex items-center gap-1.5" style={{ color: envio.courier.color || '#60A5FA' }}>
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: envio.courier.color || '#60A5FA' }} />
                         {envio.courier.nombre}
                       </span>
                       <span className="text-s text-slate-200 font-regular">
@@ -434,7 +485,7 @@ export function TablaEnvios({
               {enviosFiltrados.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-slate-500">
-                    No se encontraron envíos que coincidan con la búsqueda.
+                    No se encontraron envíos con los filtros seleccionados.
                   </td>
                 </tr>
               )}
@@ -470,7 +521,9 @@ export function TablaEnvios({
             </SheetTitle>
           </SheetHeader>
           {envioAEditar && (
-            <FormularioEditarEnvio
+            <FormularioEnvioForm
+              key={envioAEditar.id}
+              modo="editar"
               envio={envioAEditar}
               couriers={couriers}
               productos={productos}

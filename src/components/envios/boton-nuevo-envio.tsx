@@ -1,33 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
-import FormularioNuevoEnvio from '@/components/formularios/nuevo-envio-form'
+import { FormularioEnvioForm } from '@/components/formularios/formulario-envio-form'
+
+type CourierOption = {
+  id: string
+  nombre: string
+  color: string
+  referenciaPredeterminada: string | null
+}
+
+type ProductoOption = { id: string; nombre: string; nombreCorto: string | null }
 
 export function BotonNuevoEnvio({
   couriers,
   productos,
   courierPorDefectoId,
 }: {
-  couriers: any[]
-  productos: any[]
+  couriers: CourierOption[]
+  productos: ProductoOption[]
   courierPorDefectoId?: string | null
 }) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (searchParams.get('nuevo') === 'true') {
-      setOpen(true)
-    }
-  }, [searchParams])
+  const [openManualmente, setOpenManualmente] = useState(false)
+  const open = openManualmente || searchParams.get('nuevo') === 'true'
 
   const handleOpenChange = (nuevoEstado: boolean) => {
-    setOpen(nuevoEstado)
+    setOpenManualmente(nuevoEstado)
     // Limpia el parámetro ?nuevo=true de la URL al cerrar el Sheet
     if (!nuevoEstado && searchParams.get('nuevo') === 'true') {
       router.replace('/envios', { scroll: false })
@@ -48,12 +52,14 @@ export function BotonNuevoEnvio({
             Registrar Nuevo Envío
           </SheetTitle>
         </SheetHeader>
-        <FormularioNuevoEnvio
+        {open && <FormularioEnvioForm
+          key="nuevo-envio"
+          modo="crear"
           couriers={couriers}
           productos={productos}
           courierPorDefectoId={courierPorDefectoId}
           onSuccess={() => handleOpenChange(false)}
-        />
+        />}
       </SheetContent>
     </Sheet>
   )

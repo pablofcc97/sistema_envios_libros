@@ -1,0 +1,2 @@
+ALTER TABLE "Courier" ADD COLUMN "color" TEXT NOT NULL DEFAULT '#2563EB';
+ALTER TABLE "Courier" ADD COLUMN "referenciaPredeterminada" TEXT NOT NULL DEFAULT 'Agencia SHALOM';

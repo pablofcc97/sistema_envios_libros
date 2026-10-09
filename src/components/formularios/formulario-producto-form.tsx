@@ -10,6 +10,7 @@ interface FormularioProductoProps {
     id: string
     nombre: string
     nombreCorto?: string | null
+    destacado?: boolean
     precio?: number | null
     anio?: number | null
   } | null
@@ -25,6 +26,7 @@ export default function FormularioProductoForm({
 
   const [nombre, setNombre] = useState(producto?.nombre || '')
   const [nombreCorto, setNombreCorto] = useState(producto?.nombreCorto || '')
+  const [destacado, setDestacado] = useState(producto?.destacado ?? false)
   const [precio, setPrecio] = useState<string>(
     producto?.precio !== undefined && producto?.precio !== null ? String(producto.precio) : ''
   )
@@ -40,6 +42,7 @@ export default function FormularioProductoForm({
     const payload = {
       nombre,
       nombreCorto,
+      destacado,
       precio: precio ? parseFloat(precio) : 0,
       anio: anio ? parseInt(anio) : 2026,
     }
@@ -89,6 +92,16 @@ export default function FormularioProductoForm({
           className="bg-slate-900 border-slate-800 text-slate-100 font-mono"
         />
       </div>
+
+      <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2.5 text-sm text-slate-200 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={destacado}
+          onChange={(e) => setDestacado(e.target.checked)}
+          className="h-4 w-4 rounded accent-amber-500"
+        />
+        Mostrar en productos destacados al registrar envíos
+      </label>
 
       <div className="grid grid-cols-2 gap-3">
         <div>

@@ -3,10 +3,14 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
-export async function crearCourier(nombre: string) {
+export async function crearCourier(nombre: string, color: string, referenciaPredeterminada: string | null) {
   try {
     const courier = await prisma.courier.create({
-      data: { nombre: nombre.trim() },
+      data: {
+        nombre: nombre.trim(),
+        color,
+        referenciaPredeterminada,
+      },
     })
     revalidatePath('/configuracion')
     return { success: true, courier }
@@ -15,11 +19,20 @@ export async function crearCourier(nombre: string) {
   }
 }
 
-export async function actualizarCourier(id: string, nombre: string) {
+export async function actualizarCourier(
+  id: string,
+  nombre: string,
+  color: string,
+  referenciaPredeterminada: string | null,
+) {
   try {
     const courier = await prisma.courier.update({
       where: { id },
-      data: { nombre: nombre.trim() },
+      data: {
+        nombre: nombre.trim(),
+        color,
+        referenciaPredeterminada,
+      },
     })
     revalidatePath('/configuracion')
     return { success: true, courier }

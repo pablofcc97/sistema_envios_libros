@@ -11,12 +11,19 @@ import {
 } from '@/app/configuracion/actions'
 
 interface GestionCouriersProps {
-  couriersIniciales: { id: string; nombre: string }[]
+  couriersIniciales: {
+    id: string
+    nombre: string
+    color: string
+    referenciaPredeterminada: string | null
+  }[]
 }
 
 export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
   const [nombre, setNombre] = useState('')
-  const [courierAEditar, setCourierAEditar] = useState<{ id: string; nombre: string } | null>(null)
+  const [color, setColor] = useState('#2563EB')
+  const [referenciaPredeterminada, setReferenciaPredeterminada] = useState('')
+  const [courierAEditar, setCourierAEditar] = useState<GestionCouriersProps['couriersIniciales'][number] | null>(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
 
@@ -28,28 +35,34 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
     setError('')
 
     const res = courierAEditar
-      ? await actualizarCourier(courierAEditar.id, nombre)
-      : await crearCourier(nombre)
+      ? await actualizarCourier(courierAEditar.id, nombre, color, referenciaPredeterminada.trim() || null)
+      : await crearCourier(nombre, color, referenciaPredeterminada.trim() || null)
 
     setCargando(false)
 
     if (res.success) {
       setNombre('')
+      setColor('#2563EB')
+      setReferenciaPredeterminada('')
       setCourierAEditar(null)
     } else {
       setError(res.error || 'Ocurrió un error')
     }
   }
 
-  const handleEditar = (courier: { id: string; nombre: string }) => {
+  const handleEditar = (courier: GestionCouriersProps['couriersIniciales'][number]) => {
     setCourierAEditar(courier)
     setNombre(courier.nombre)
+    setColor(courier.color)
+    setReferenciaPredeterminada(courier.referenciaPredeterminada || '')
     setError('')
   }
 
   const handleCancelarEdicion = () => {
     setCourierAEditar(null)
     setNombre('')
+    setColor('#2563EB')
+    setReferenciaPredeterminada('')
     setError('')
   }
 
@@ -68,14 +81,37 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input
-            required
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Ej: Olva Courier, Shalom, Marvisur..."
-            className="bg-slate-950 border-slate-800 text-slate-100 flex-1"
-          />
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+          <div className="space-y-3">
+            <Input
+              required
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej: Olva Courier, Shalom, Marvisur..."
+              className="bg-slate-950 border-slate-800 text-slate-100"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex items-center gap-3 text-xs text-slate-400">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  aria-label="Color del courier"
+                  className="h-9 w-12 cursor-pointer rounded border border-slate-700 bg-slate-950 p-1"
+                />
+                Color del courier
+              </label>
+              <label className="space-y-1 text-xs text-slate-400">
+                Referencia predeterminada (opcional)
+                <Input
+                  value={referenciaPredeterminada}
+                  onChange={(e) => setReferenciaPredeterminada(e.target.value)}
+                  placeholder="Ej: Agencia central o domicilio"
+                  className="bg-slate-950 border-slate-800 text-slate-100"
+                />
+              </label>
+            </div>
+          </div>
           <Button
             type="submit"
             disabled={cargando}
@@ -111,7 +147,11 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
               key={courier.id}
               className="p-4 flex items-center justify-between hover:bg-slate-800/40 transition-colors"
             >
-              <span className="font-medium text-slate-200 text-sm">{courier.nombre}</span>
+              <span className="font-medium text-slate-200 text-sm flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full border border-white/20" style={{ backgroundColor: courier.color }} />
+                {courier.nombre}
+                <span className="text-xs text-slate-500">· {courier.referenciaPredeterminada || 'Sin referencia predeterminada'}</span>
+              </span>
               <div className="flex items-center gap-1">
                 <Button
                   size="sm"

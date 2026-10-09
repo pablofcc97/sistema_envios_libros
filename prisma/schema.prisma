@@ -21,6 +21,7 @@ model Producto {
   id          String   @id @default(uuid())
   nombre      String
   nombreCorto String?  // Campo nuevo para etiquetas y rótulos
+  destacado   Boolean  @default(false)
   precio      Float?   @default(0.0)
   anio        Int?     @default(2026)
   createdAt   DateTime @default(now())
@@ -30,12 +31,14 @@ model Producto {
 }
 
 model Courier {
-  id              String          @id @default(cuid())
-  nombre          String          @unique
-  envios          Envio[]
-  configuraciones Configuracion[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @default(now()) @updatedAt // <- Agrega @default(now())
+  id                       String          @id @default(cuid())
+  nombre                   String          @unique
+  color                    String          @default("#2563EB")
+  referenciaPredeterminada String?
+  envios                   Envio[]
+  configuraciones          Configuracion[]
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @default(now()) @updatedAt // <- Agrega @default(now())
 }
 
 model Envio {

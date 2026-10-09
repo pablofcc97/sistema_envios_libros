@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     referencia: e.referencia || '',
     departamento: e.departamento,
     courier: e.courier.nombre,
+    colorCourier: e.courier.color,
     observaciones: e.observaciones || '',
     libros: e.productos
       .map((p) => `${p.producto.nombreCorto || p.producto.nombre} x${p.cantidad}`)

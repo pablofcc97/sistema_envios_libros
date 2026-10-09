@@ -5,7 +5,7 @@ export const revalidate = 0
 
 export default async function ProductosPage() {
   const productos = await prisma.producto.findMany({
-    orderBy: { nombre: 'asc' },
+    orderBy: [{ destacado: 'desc' }, { nombre: 'asc' }],
   })
 
   return (

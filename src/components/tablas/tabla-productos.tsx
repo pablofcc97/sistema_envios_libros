@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { PackagePlus, SquarePen, Trash2 } from 'lucide-react'
+import { PackagePlus, SquarePen, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -89,6 +89,7 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
                 </th>
                 <th className="p-3">Nombre del Producto / Libro</th>
                 <th className="p-3">Nombre Corto</th>
+                <th className="p-3 text-center">Destacado</th>
                 <th className="p-3 text-center">Año / Edición</th>
                 <th className="p-3 text-center">Precio Referencial</th>
                 <th className="p-3 text-center w-28">Acciones</th>
@@ -120,6 +121,17 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
                     <span className="font-semibold text-blue-400">
                       {producto.nombreCorto || '-'}
                     </span>
+                  </td>
+
+                  <td className="p-3 text-center">
+                    {producto.destacado ? (
+                      <Badge variant="outline" className="gap-1 border-amber-700 bg-amber-950/50 text-amber-300">
+                        <Star className="h-3 w-3 fill-current" />
+                        Destacado
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
                   </td>
 
                   {/* Año / Edición */}
@@ -172,7 +184,7 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
 
               {productosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-500">
+                  <td colSpan={7} className="text-center py-8 text-slate-500">
                     No se encontraron productos coincidentes.
                   </td>
                 </tr>

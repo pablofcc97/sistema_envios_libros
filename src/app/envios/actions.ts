@@ -15,7 +15,7 @@ export async function crearEnvio(formData: FormData) {
   const direccion = direccionRaw ? direccionRaw : null
   
   const referenciaRaw = (formData.get('referencia') as string)?.trim()
-  const referencia = referenciaRaw ? referenciaRaw : 'Agencia SHALOM'
+  const referencia = referenciaRaw || null
 
   const departamento = formData.get('departamento') as string
   const courierId = formData.get('courierId') as string
@@ -30,12 +30,6 @@ export async function crearEnvio(formData: FormData) {
     throw new Error('Completa los campos obligatorios del cliente, departamento y courier.')
   }
 
-  const cliente = await prisma.cliente.upsert({
-    where: { dni },
-    update: { nombre, celular, email },
-    create: { nombre, dni, celular, email },
-  })
-
   const productos = await prisma.producto.findMany()
   const productosEnvio = productos
     .filter((p) => formData.get(`producto_${p.id}`) === 'on')
@@ -47,6 +41,12 @@ export async function crearEnvio(formData: FormData) {
   if (productosEnvio.length === 0) {
     throw new Error('Debes seleccionar al menos un producto para registrar el envío.')
   }
+
+  const cliente = await prisma.cliente.upsert({
+    where: { dni },
+    update: { nombre, celular, email },
+    create: { nombre, dni, celular, email },
+  })
 
   await prisma.envio.create({
     data: {
@@ -75,7 +75,7 @@ export async function crearEnvio(formData: FormData) {
 export async function actualizarEnvio(id: string, formData: FormData) {
   const direccion = (formData.get('direccion') as string)?.trim()
   const claveEnvio = (formData.get('claveEnvio') as string)?.trim()
-  const referencia = (formData.get('referencia') as string)?.trim() || 'Agencia SHALOM'
+  const referencia = (formData.get('referencia') as string)?.trim() || null
   const observaciones = (formData.get('observaciones') as string)?.trim() || null
   const marcarComoRegistrado = formData.get('marcarRegistrado') === 'true'
 
@@ -130,7 +130,7 @@ export async function eliminarEnvio(id: string) {
 export async function actualizarEnvioCompleto(id: string, formData: FormData) {
   const direccion = (formData.get('direccion') as string)?.trim() || null
   const claveEnvio = (formData.get('claveEnvio') as string)?.trim() || null
-  const referencia = (formData.get('referencia') as string)?.trim() || 'Agencia SHALOM'
+  const referencia = (formData.get('referencia') as string)?.trim() || null
   const departamento = formData.get('departamento') as string
   const courierId = formData.get('courierId') as string
   const observaciones = (formData.get('observaciones') as string)?.trim() || null
@@ -139,32 +139,69 @@ export async function actualizarEnvioCompleto(id: string, formData: FormData) {
   const fechaStr = formData.get('createdAt') as string
   const nuevaFecha = fechaStr ? new Date(`${fechaStr}T12:00:00Z`) : undefined
 
-  const productos = await prisma.producto.findMany()
-  const productosEnvio = productos
-    .filter((p) => formData.get(`producto_${p.id}`) === 'on')
-    .map((p) => ({
-      productoId: p.id,
-      cantidad: Number(formData.get(`cantidad_${p.id}`)) || 1,
-    }))
+  const actualizarCliente = formData.has('dni')
+  const dni = (formData.get('dni') as string | null)?.trim()
+  const nombre = (formData.get('nombre') as string | null)?.trim()
+  const celular = (formData.get('celular') as string | null)?.trim()
+  const email = (formData.get('email') as string | null)?.trim().toLowerCase() || null
 
-  await prisma.envio.update({
-    where: { id },
-    data: {
-      courierId,
-      departamento,
-      direccion,
-      referencia,
-      claveEnvio,
-      observaciones,
-      ...(nuevaFecha ? { createdAt: nuevaFecha } : {}), // Actualiza la fecha solo si viene presente
-      productos: {
-        deleteMany: {}, // Limpia los productos anteriores
-        create: productosEnvio, // Inserta la nueva lista
+  if (actualizarCliente && (!dni || !nombre || !celular)) {
+    throw new Error('Completa el nombre, DNI y celular del cliente.')
+  }
+  if (actualizarCliente && (!/^\d{8}$/.test(dni!) || !/^\d{9}$/.test(celular!))) {
+    throw new Error('Verifica que el DNI tenga 8 dígitos y el celular 9.')
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const envioActual = await tx.envio.findUnique({
+      where: { id },
+      select: { clienteId: true },
+    })
+    if (!envioActual) throw new Error('No se encontró el envío que quieres actualizar.')
+
+    if (actualizarCliente && dni && nombre && celular) {
+      const clienteConDni = await tx.cliente.findUnique({ where: { dni } })
+      if (clienteConDni && clienteConDni.id !== envioActual.clienteId) {
+        throw new Error('Ese DNI ya está asociado a otro cliente.')
+      }
+
+      await tx.cliente.update({
+        where: { id: envioActual.clienteId },
+        data: { nombre, dni, celular, email },
+      })
+    }
+
+    const productos = await tx.producto.findMany()
+    const productosEnvio = productos
+      .filter((producto) => formData.get(`producto_${producto.id}`) === 'on')
+      .map((producto) => ({
+        productoId: producto.id,
+        cantidad: Number(formData.get(`cantidad_${producto.id}`)) || 1,
+      }))
+    if (productosEnvio.length === 0) {
+      throw new Error('Debes seleccionar al menos un producto para el envío.')
+    }
+
+    await tx.envio.update({
+      where: { id },
+      data: {
+        courierId,
+        departamento,
+        direccion,
+        referencia,
+        claveEnvio,
+        observaciones,
+        ...(nuevaFecha ? { createdAt: nuevaFecha } : {}),
+        productos: {
+          deleteMany: {},
+          create: productosEnvio,
+        },
       },
-    },
+    })
   })
 
   revalidatePath('/envios')
+  if (actualizarCliente) revalidatePath('/clientes')
 }
 
 export async function marcarComoRotulados(ids: string[]) {
