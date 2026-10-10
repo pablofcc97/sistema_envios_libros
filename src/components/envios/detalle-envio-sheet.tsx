@@ -22,6 +22,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { BadgeEstado } from '@/components/ui/badge-estado'
+import { copiarTexto } from '@/lib/copiar-texto'
 
 type EnvioDetalle = Prisma.EnvioGetPayload<{
   include: {
@@ -61,6 +62,7 @@ export function DetalleEnvioSheet({
   onOpenChange,
 }: DetalleEnvioSheetProps) {
   const [copiadoCampo, setCopiadoCampo] = useState<string | null>(null)
+  const [errorCopiaCampo, setErrorCopiaCampo] = useState<string | null>(null)
 
   if (!envio) return null
 
@@ -78,9 +80,13 @@ export function DetalleEnvioSheet({
 
   const handleCopiar = async (texto: string, campo: string) => {
     if (!texto) return
-    await navigator.clipboard.writeText(texto)
-    setCopiadoCampo(campo)
-    setTimeout(() => setCopiadoCampo(null), 2000)
+    const copiado = await copiarTexto(texto)
+    setCopiadoCampo(copiado ? campo : null)
+    setErrorCopiaCampo(copiado ? null : campo)
+    setTimeout(() => {
+      setCopiadoCampo(null)
+      setErrorCopiaCampo(null)
+    }, 2000)
   }
 
   const colorCourier = envio.courier.color || '#2563EB'
@@ -90,12 +96,14 @@ export function DetalleEnvioSheet({
       type="button"
       onClick={() => void handleCopiar(texto, campo)}
       className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-      title={`Copiar ${etiqueta}`}
+      title={errorCopiaCampo === campo ? 'No se pudo copiar' : copiadoCampo === campo ? '¡Copiado!' : `Copiar ${etiqueta}`}
       aria-label={`Copiar ${etiqueta}`}
     >
       {copiadoCampo === campo
         ? <Check className="h-4 w-4 text-emerald-400" />
-        : <Copy className="h-4 w-4" />}
+        : errorCopiaCampo === campo
+          ? <AlertTriangle className="h-4 w-4 text-rose-400" />
+          : <Copy className="h-4 w-4" />}
     </button>
   )
 

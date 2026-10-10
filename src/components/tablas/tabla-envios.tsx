@@ -229,12 +229,12 @@ export function TablaEnvios({
             placeholder="Buscar por Nombre, DNI, Celular o Email..."
           />
 
-          <div className="relative flex items-center">
+          <div className="relative flex w-full items-center sm:w-auto">
             <input
               type="date"
               value={filtroFecha}
               onChange={handleFechaChange}
-              className="bg-slate-900 border border-slate-700/80 text-slate-100 text-sm rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark] cursor-pointer"
+              className="w-full cursor-pointer rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2 pr-8 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark] sm:w-auto"
             />
             {filtroFecha ? (
               <button
@@ -258,14 +258,14 @@ export function TablaEnvios({
             Con observaciones
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-slate-400">
-            Región
+          <label className="flex w-full items-center gap-2 whitespace-nowrap text-xs text-slate-400 sm:w-auto">
+            <span className="shrink-0">Región</span>
             <select
               id="filtro-departamento-envios"
               aria-label="Filtrar envíos por región"
               value={filtroDepartamento}
               onChange={(e) => handleDepartamentoChange(e.target.value)}
-              className="bg-slate-900 border border-slate-700/80 text-slate-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              className="min-w-0 flex-1 cursor-pointer rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:flex-none"
             >
               <option value="">Todas</option>
               {departamentosDisponibles.map((departamento) => (
@@ -328,7 +328,7 @@ export function TablaEnvios({
           <Button
             onClick={handleExportarExcel}
             variant="outline"
-            className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 gap-2 text-sm cursor-pointer"
+            className="hidden cursor-pointer gap-2 border-slate-700 bg-slate-800 text-sm text-slate-200 hover:bg-slate-700 md:inline-flex"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
             {seleccionados.length > 0

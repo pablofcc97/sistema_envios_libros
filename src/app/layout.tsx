@@ -22,11 +22,11 @@ export default async function RootLayout({
   return (
     <html lang="es" className="dark" suppressHydrationWarning>
       {/* h-screen y overflow-hidden en el body para evitar el scroll global de la ventana */}
-      <body className={`${inter.className} bg-slate-950 text-slate-100 h-screen overflow-hidden flex antialiased`}>
+      <body className={`${inter.className} flex h-dvh overflow-hidden bg-slate-950 text-slate-100 antialiased`}>
         <AppSidebar />
         
         {/* main se restringe a h-screen y maneja el scroll interno */}
-        <main className="flex-1 h-screen overflow-y-auto relative flex flex-col">
+        <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-y-auto">
           {/* Barra Fija en el borde superior del main */}
           <BarraResumenAgencia
             ultimaClave={metricas.ultimaClave}
@@ -36,7 +36,7 @@ export default async function RootLayout({
           />
 
           {/* Área de contenido */}
-          <div className="p-8 flex-1">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8">
             {children}
           </div>
         </main>

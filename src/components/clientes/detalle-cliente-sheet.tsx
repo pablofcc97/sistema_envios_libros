@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { Prisma } from '@prisma/client'
 import {
   Sheet,
   SheetContent,
@@ -9,25 +10,42 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { BadgeEstado } from '@/components/ui/badge-estado'
-import { User, Phone, Mail, FileText, MapPin, Package, History, Copy, Check } from 'lucide-react'
+import { User, Phone, Mail, FileText, MapPin, Package, History, Copy, Check, AlertTriangle } from 'lucide-react'
+import { copiarTexto } from '@/lib/copiar-texto'
+
+type ClienteDetalle = Prisma.ClienteGetPayload<{
+  include: {
+    envios: {
+      include: {
+        courier: true
+        productos: { include: { producto: true } }
+      }
+    }
+  }
+}>
 
 interface DetalleClienteSheetProps {
-  cliente: any | null
+  cliente: ClienteDetalle | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClienteSheetProps) {
   const [copiadoCampo, setCopiadoCampo] = useState<string | null>(null)
+  const [errorCopiaCampo, setErrorCopiaCampo] = useState<string | null>(null)
 
   if (!cliente) return null
 
   // Helper para copiar al portapapeles
-  const handleCopiar = (texto: string, campo: string) => {
+  const handleCopiar = async (texto: string, campo: string) => {
     if (!texto) return
-    navigator.clipboard.writeText(texto)
-    setCopiadoCampo(campo)
-    setTimeout(() => setCopiadoCampo(null), 2000)
+    const copiado = await copiarTexto(texto)
+    setCopiadoCampo(copiado ? campo : null)
+    setErrorCopiaCampo(copiado ? null : campo)
+    setTimeout(() => {
+      setCopiadoCampo(null)
+      setErrorCopiaCampo(null)
+    }, 2000)
   }
 
   // Ordenar envíos de más reciente a más antiguo
@@ -41,7 +59,7 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
   // Calcular el consolidado total de productos adquiridos por el cliente
   const conteoProductos = new Map<string, number>()
   enviosOrdenados.forEach((e) => {
-    e.productos?.forEach((p: any) => {
+    e.productos?.forEach((p) => {
       const nombreProd = p.producto.nombreCorto || p.producto.nombre
       const actual = conteoProductos.get(nombreProd) || 0
       conteoProductos.set(nombreProd, actual + p.cantidad)
@@ -79,9 +97,9 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
                 type="button"
                 onClick={() => handleCopiar(cliente.nombre, 'nombre')}
                 className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
-                title="Copiar nombre"
+                title={errorCopiaCampo === 'nombre' ? 'No se pudo copiar' : copiadoCampo === 'nombre' ? '¡Copiado!' : 'Copiar nombre'}
               >
-                {copiadoCampo === 'nombre' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copiadoCampo === 'nombre' ? <Check className="w-4 h-4 text-emerald-400" /> : errorCopiaCampo === 'nombre' ? <AlertTriangle className="w-4 h-4 text-rose-400" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
 
@@ -96,9 +114,9 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
                 type="button"
                 onClick={() => handleCopiar(cliente.dni, 'dni')}
                 className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer"
-                title="Copiar DNI"
+                title={errorCopiaCampo === 'dni' ? 'No se pudo copiar' : copiadoCampo === 'dni' ? '¡Copiado!' : 'Copiar DNI'}
               >
-                {copiadoCampo === 'dni' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copiadoCampo === 'dni' ? <Check className="w-4 h-4 text-emerald-400" /> : errorCopiaCampo === 'dni' ? <AlertTriangle className="w-4 h-4 text-rose-400" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
 
@@ -113,9 +131,9 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
                 type="button"
                 onClick={() => handleCopiar(cliente.celular, 'celular')}
                 className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer"
-                title="Copiar Celular"
+                title={errorCopiaCampo === 'celular' ? 'No se pudo copiar' : copiadoCampo === 'celular' ? '¡Copiado!' : 'Copiar Celular'}
               >
-                {copiadoCampo === 'celular' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copiadoCampo === 'celular' ? <Check className="w-4 h-4 text-emerald-400" /> : errorCopiaCampo === 'celular' ? <AlertTriangle className="w-4 h-4 text-rose-400" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
 
@@ -129,11 +147,11 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
               {cliente.email && (
                 <button
                   type="button"
-                  onClick={() => handleCopiar(cliente.email, 'email')}
+                  onClick={() => handleCopiar(cliente.email || '', 'email')}
                   className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
-                  title="Copiar Correo"
+                  title={errorCopiaCampo === 'email' ? 'No se pudo copiar' : copiadoCampo === 'email' ? '¡Copiado!' : 'Copiar Correo'}
                 >
-                  {copiadoCampo === 'email' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  {copiadoCampo === 'email' ? <Check className="w-4 h-4 text-emerald-400" /> : errorCopiaCampo === 'email' ? <AlertTriangle className="w-4 h-4 text-rose-400" /> : <Copy className="w-4 h-4" />}
                 </button>
               )}
             </div>
@@ -194,7 +212,7 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
                       </div>
                       <p className="text-xs text-slate-400 truncate">
                         {envio.productos
-                          ?.map((p: any) => `${p.producto.nombreCorto || p.producto.nombre} (x${p.cantidad})`)
+                          ?.map((p) => `${p.producto.nombreCorto || p.producto.nombre} (x${p.cantidad})`)
                           .join(', ')}
                       </p>
                     </div>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, AlertTriangle } from 'lucide-react'
+import { copiarTexto } from '@/lib/copiar-texto'
 
 export function BotonCopiar({
   valor,
@@ -11,13 +12,18 @@ export function BotonCopiar({
   tooltip?: string
 }) {
   const [copiado, setCopiado] = useState(false)
+  const [errorCopia, setErrorCopia] = useState(false)
 
   async function copiar(e: React.MouseEvent) {
     e.stopPropagation()
     if (!valor) return
-    await navigator.clipboard.writeText(valor)
-    setCopiado(true)
-    setTimeout(() => setCopiado(false), 1200)
+    const resultado = await copiarTexto(valor)
+    setCopiado(resultado)
+    setErrorCopia(!resultado)
+    setTimeout(() => {
+      setCopiado(false)
+      setErrorCopia(false)
+    }, 1200)
   }
 
   return (
@@ -25,10 +31,12 @@ export function BotonCopiar({
       type="button"
       onClick={copiar}
       className="cursor-pointer text-slate-500 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition-all inline-flex items-center justify-center shrink-0"
-      title={copiado ? '¡Copiado!' : tooltip}
+      title={errorCopia ? 'No se pudo copiar' : copiado ? '¡Copiado!' : tooltip}
     >
       {copiado ? (
         <Check className="w-3.5 h-3.5 text-emerald-400" />
+      ) : errorCopia ? (
+        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
       ) : (
         <Copy className="w-3.5 h-3.5" />
       )}

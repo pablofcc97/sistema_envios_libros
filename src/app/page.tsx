@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { KpiCard } from '@/components/dashboard/kpi-card'
 import { UltimosEnviosTabla } from '@/components/dashboard/ultimos-envios-tabla'
-import { DistribuicionCouriers } from '@/components/dashboard/distribuicion-couriers'
 import { TopDepartamentosTabla } from '@/components/dashboard/top-departamentos-tabla'
 
 export const revalidate = 0
@@ -25,7 +24,6 @@ export default async function DashboardPage() {
     enviosRegistrados,
     totalClientes,
     totalProductos,
-    enviosPorCourierDb,
     enviosPorDepartamentoDb,
     ultimosEnvios,
   ] = await Promise.all([
@@ -34,10 +32,6 @@ export default async function DashboardPage() {
     prisma.envio.count({ where: { estado: 'registrado' } }),
     prisma.cliente.count(),
     prisma.producto.count(),
-    prisma.envio.groupBy({
-      by: ['courierId'],
-      _count: { id: true },
-    }),
     prisma.envio.groupBy({
       by: ['departamento'],
       _count: { id: true },
@@ -57,12 +51,7 @@ export default async function DashboardPage() {
 
   // Map para distribución de couriers
   const couriersDb = await prisma.courier.findMany()
-  const courierMap = new Map(couriersDb.map((c) => [c.id, c.nombre]))
-
-  const distribuicionCouriers = enviosPorCourierDb.map((item) => ({
-    nombre: courierMap.get(item.courierId) || 'Desconocido',
-    total: item._count.id,
-  }))
+  
 
   // Formato para Top Departamentos
   const topDepartamentos = enviosPorDepartamentoDb.map((item) => {
@@ -158,7 +147,6 @@ export default async function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <DistribuicionCouriers datos={distribuicionCouriers} />
           <TopDepartamentosTabla datos={topDepartamentos} />
         </div>
       </div>

@@ -24,31 +24,33 @@ export default async function ConfiguracionPage() {
       </div>
 
       <Tabs defaultValue="couriers" className="space-y-6">
-        <TabsList className="bg-slate-900 border border-slate-800 text-slate-400 p-1">
-          <TabsTrigger
-            value="couriers"
-            className="data-[state=active]:bg-slate-800 data-[state=active]:text-white cursor-pointer gap-2"
-          >
-            <Truck className="w-4 h-4" />
-            Agencias / Couriers
-          </TabsTrigger>
+        <div className="w-full overflow-x-auto overscroll-x-contain">
+          <TabsList className="w-max min-w-full border border-slate-800 bg-slate-900 p-1 text-slate-400 sm:w-fit sm:min-w-0">
+            <TabsTrigger
+              value="couriers"
+              className="flex-none cursor-pointer gap-2 data-[state=active]:bg-slate-800 data-[state=active]:text-white sm:flex-1"
+            >
+              <Truck className="w-4 h-4" />
+              Agencias / Couriers
+            </TabsTrigger>
 
-          <TabsTrigger
-            value="remitente"
-            className="data-[state=active]:bg-slate-800 data-[state=active]:text-white cursor-pointer gap-2"
-          >
-            <Building2 className="w-4 h-4" />
-            Datos del Remitente
-          </TabsTrigger>
+            <TabsTrigger
+              value="remitente"
+              className="flex-none cursor-pointer gap-2 data-[state=active]:bg-slate-800 data-[state=active]:text-white sm:flex-1"
+            >
+              <Building2 className="w-4 h-4" />
+              Datos del Remitente
+            </TabsTrigger>
 
-          <TabsTrigger
-            value="preferencias"
-            className="data-[state=active]:bg-slate-800 data-[state=active]:text-white cursor-pointer gap-2"
-          >
-            <Sliders className="w-4 h-4" />
-            Preferencias
-          </TabsTrigger>
-        </TabsList>
+            <TabsTrigger
+              value="preferencias"
+              className="flex-none cursor-pointer gap-2 data-[state=active]:bg-slate-800 data-[state=active]:text-white sm:flex-1"
+            >
+              <Sliders className="w-4 h-4" />
+              Preferencias
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Pestaña 1: Couriers */}
         <TabsContent value="couriers">
