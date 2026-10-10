@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Check,
   Copy,
+  AlertTriangle,
   Key,
   Mail,
   MapPin,
@@ -17,7 +18,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
@@ -33,6 +33,8 @@ type EnvioDetalle = Prisma.EnvioGetPayload<{
 
 interface DetalleEnvioSheetProps {
   envio: EnvioDetalle | null
+  posibleDuplicadoDe?: EnvioDetalle | null
+  onVerEnvioRelacionado?: (envio: EnvioDetalle) => void
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -51,7 +53,13 @@ function obtenerColorTexto(color: string | null | undefined) {
   return contrasteNegro >= contrasteBlanco ? '#000000' : '#FFFFFF'
 }
 
-export function DetalleEnvioSheet({ envio, open, onOpenChange }: DetalleEnvioSheetProps) {
+export function DetalleEnvioSheet({
+  envio,
+  posibleDuplicadoDe,
+  onVerEnvioRelacionado,
+  open,
+  onOpenChange,
+}: DetalleEnvioSheetProps) {
   const [copiadoCampo, setCopiadoCampo] = useState<string | null>(null)
 
   if (!envio) return null
@@ -129,6 +137,31 @@ export function DetalleEnvioSheet({ envio, open, onOpenChange }: DetalleEnvioShe
         </SheetHeader>
 
         <div className="space-y-5 px-5 py-5 sm:px-6">
+          {posibleDuplicadoDe && (
+            <section className="rounded-xl border border-amber-800/70 bg-amber-950/35 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h3 className="text-sm font-bold text-amber-200">Posible envío duplicado</h3>
+                  <p className="text-xs leading-relaxed text-amber-100/75">
+                    Mismo cliente, productos y cantidades que el envío del {formatearFechaExtendida(posibleDuplicadoDe.createdAt)}.
+                    {' '}Estado: <span className="font-semibold">{posibleDuplicadoDe.estado}</span>
+                    {posibleDuplicadoDe.claveEnvio ? ` · Clave: ${posibleDuplicadoDe.claveEnvio}` : ''}
+                  </p>
+                  {onVerEnvioRelacionado && (
+                    <button
+                      type="button"
+                      onClick={() => onVerEnvioRelacionado(posibleDuplicadoDe)}
+                      className="pt-1 text-xs font-semibold text-amber-300 underline underline-offset-2 hover:text-amber-100"
+                    >
+                      Ver envío anterior
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className="space-y-2.5">
             <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
               <User className="h-4 w-4 text-blue-400" /> Cliente

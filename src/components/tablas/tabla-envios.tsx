@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { Courier, Prisma, Producto } from '@prisma/client'
 import { 
+  AlertTriangle,
   FileSpreadsheet, 
   Trash2, 
   Printer,
@@ -25,25 +27,78 @@ import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
 // Custom Hook
 import { useSeleccionLote } from '@/hooks/use-seleccion-lote'
 
+type EnvioConDetalle = Prisma.EnvioGetPayload<{
+  include: {
+    cliente: true
+    courier: true
+    productos: { include: { producto: true } }
+  }
+}>
+
 export function TablaEnvios({
   enviosIniciales,
   couriers,
   productos,
 }: {
-  enviosIniciales: any[]
-  couriers: any[]
-  productos: any[]
+  enviosIniciales: EnvioConDetalle[]
+  couriers: Courier[]
+  productos: Producto[]
 }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroDepartamento, setFiltroDepartamento] = useState('')
   const [soloConObservaciones, setSoloConObservaciones] = useState(false)
-  const [envioACompletar, setEnvioACompletar] = useState<any>(null)
-  const [envioAEditar, setEnvioAEditar] = useState<any>(null)
+  const [envioACompletar, setEnvioACompletar] = useState<{
+    id: string
+    clienteNombre: string
+    direccion: string | null
+    claveEnvio: string | null
+  } | null>(null)
+  const [envioAEditar, setEnvioAEditar] = useState<EnvioConDetalle | null>(null)
   const [paginaActual, setPaginaActual] = useState(1)
   const [filasPorPagina, setFilasPorPagina] = useState(10)
-  const [envioSeleccionado, setEnvioSeleccionado] = useState<any | null>(null)
+  const [envioSeleccionado, setEnvioSeleccionado] = useState<EnvioConDetalle | null>(null)
+  const [posibleDuplicadoDe, setPosibleDuplicadoDe] = useState<EnvioConDetalle | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  // Marca el envío más reciente cuando coincide el cliente y el contenido
+  // exacto con otro envío creado dentro de los cinco días anteriores.
+  const posiblesDuplicados = useMemo(() => {
+    const grupos = new Map<string, EnvioConDetalle[]>()
+    for (const envio of enviosIniciales) {
+      if (!envio.clienteId || !envio.productos?.length) continue
+      const productos = envio.productos
+        .map((item) => `${item.productoId}:${item.cantidad}`)
+        .sort()
+        .join('|')
+      const firma = `${envio.clienteId}::${productos}`
+      const grupo = grupos.get(firma) ?? []
+      grupo.push(envio)
+      grupos.set(firma, grupo)
+    }
+
+    const duplicados = new Map<string, EnvioConDetalle>()
+    const ventanaMs = 5 * 24 * 60 * 60 * 1000
+    for (const grupo of grupos.values()) {
+      grupo.sort((a, b) => (
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        || String(a.id).localeCompare(String(b.id))
+      ))
+      let anterior: EnvioConDetalle | null = null
+      for (const envio of grupo) {
+        const fecha = new Date(envio.createdAt).getTime()
+        if (
+          envio.estado !== 'rotulado'
+          && anterior
+          && fecha - new Date(anterior.createdAt).getTime() <= ventanaMs
+        ) {
+          duplicados.set(envio.id, anterior)
+        }
+        anterior = envio
+      }
+    }
+    return duplicados
+  }, [enviosIniciales])
 
   const departamentosDisponibles = Array.from(new Set(
     enviosIniciales
@@ -127,8 +182,9 @@ export function TablaEnvios({
     return envio?.estado === 'registrado'
   })
 
-  const handleVerDetalle = (envio: any) => {
+  const handleVerDetalle = (envio: EnvioConDetalle) => {
     setEnvioSeleccionado(envio)
+    setPosibleDuplicadoDe(posiblesDuplicados.get(envio.id) ?? null)
     setSheetOpen(true)
   }
 
@@ -330,10 +386,13 @@ export function TablaEnvios({
             </thead>
             <tbody className="divide-y divide-slate-800/80">
               {enviosPaginados.map((envio) => (
+                (() => {
+                  const duplicadoDe = posiblesDuplicados.get(envio.id)
+                  return (
                 <tr
                   key={envio.id}
                   onClick={() => handleVerDetalle(envio)}
-                  className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                  className={`transition-colors cursor-pointer group ${duplicadoDe ? 'bg-amber-950/20 hover:bg-amber-950/35' : 'hover:bg-slate-800/40'}`}
                 >
                   {/* Checkbox de selección */}
                   <td className="p-4 w-12 text-center" onClick={(e) => e.stopPropagation()}>
@@ -352,6 +411,12 @@ export function TablaEnvios({
                         <span>{envio.cliente.nombre}</span>
                         <BotonCopiar valor={envio.cliente.nombre} tooltip="Copiar Nombre" />
                       </div>
+                      {duplicadoDe && (
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-300" title={`Coincide con el envío ${duplicadoDe.claveEnvio || duplicadoDe.id} del ${new Date(duplicadoDe.createdAt).toLocaleDateString('es-PE')}`}>
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          Revisar posible duplicado
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                         <div className="inline-flex items-center gap-1 bg-slate-800/90 border border-slate-700/80 px-2 py-0.5 rounded text-xs font-mono font-bold text-blue-300">
@@ -391,7 +456,7 @@ export function TablaEnvios({
                   {/* Libros / Productos */}
                   <td className="p-3 text-xs text-slate-300 max-w-xs truncate">
                     {envio.productos
-                      .map((p: any) => `${p.producto.nombreCorto || p.producto.nombre} (x${p.cantidad})`)
+                      .map((p) => `${p.producto.nombreCorto || p.producto.nombre} (x${p.cantidad})`)
                       .join(', ')}
                   </td>
 
@@ -480,6 +545,8 @@ export function TablaEnvios({
                     </div>
                   </td>
                 </tr>
+                  )
+                })()
               ))}
 
               {enviosFiltrados.length === 0 && (
@@ -535,8 +602,16 @@ export function TablaEnvios({
 
       <DetalleEnvioSheet
         envio={envioSeleccionado}
+        posibleDuplicadoDe={posibleDuplicadoDe}
+        onVerEnvioRelacionado={handleVerDetalle}
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(open) => {
+          setSheetOpen(open)
+          if (!open) {
+            setEnvioSeleccionado(null)
+            setPosibleDuplicadoDe(null)
+          }
+        }}
       />
     </div>
   )
