@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { crearCliente, actualizarCliente } from '@/app/clientes/actions'
+import { normalizarNumero } from '@/lib/normalizar-numero'
 
 interface FormularioClienteProps {
   cliente?: {
@@ -24,21 +25,16 @@ export default function FormularioClienteForm({
   const [error, setError] = useState('')
 
   const [nombre, setNombre] = useState(cliente?.nombre || '')
-  const [dni, setDni] = useState(cliente?.dni || '')
-  const [celular, setCelular] = useState(cliente?.celular || '')
+  const [dni, setDni] = useState(normalizarNumero(cliente?.dni || ''))
+  const [celular, setCelular] = useState(normalizarNumero(cliente?.celular || ''))
   const [email, setEmail] = useState(cliente?.email || '')
-
-  // Elimina cualquier espacio (inicio, medio, final), guiones y letras, recortando a maxLen
-  const limpiarTextoNumerico = (texto: string, maxLen: number) => {
-    return texto.replace(/\D/g, '').slice(0, maxLen)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    const dniLimpio = limpiarTextoNumerico(dni, 8)
-    const celularLimpio = limpiarTextoNumerico(celular, 9)
+    const dniLimpio = normalizarNumero(dni)
+    const celularLimpio = normalizarNumero(celular)
 
     if (dniLimpio.length !== 8) {
       setError('El DNI debe tener exactamente 8 dígitos.')
@@ -101,9 +97,9 @@ export default function FormularioClienteForm({
           <Input
             required
             value={dni}
-            onChange={(e) => setDni(limpiarTextoNumerico(e.target.value, 8))}
+            onChange={(e) => setDni(normalizarNumero(e.target.value))}
+            inputMode="numeric"
             placeholder="72723047"
-            maxLength={8}
             className="bg-slate-900 border-slate-800 text-slate-100 font-mono"
           />
         </div>
@@ -115,7 +111,8 @@ export default function FormularioClienteForm({
           <Input
             required
             value={celular}
-            onChange={(e) => setCelular(limpiarTextoNumerico(e.target.value, 9))}
+            onChange={(e) => setCelular(normalizarNumero(e.target.value))}
+            inputMode="numeric"
             placeholder="955870376"
             className="bg-slate-900 border-slate-800 text-slate-100 font-mono"
           />

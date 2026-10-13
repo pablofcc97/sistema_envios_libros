@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, Star } from 'lucide-react'
 import { actualizarEnvioCompleto, crearEnvio } from '@/app/envios/actions'
+import { normalizarNumero } from '@/lib/normalizar-numero'
 
 const DEPARTAMENTOS_PERU = [
   'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca',
@@ -56,10 +57,6 @@ const inputClass = 'w-full bg-slate-800 border border-slate-700 text-slate-100 p
 const seccionClass = 'space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800'
 const labelClass = 'block text-xs text-slate-400 mb-1'
 
-function limpiarTextoNumerico(texto: string, maxLen: number) {
-  return texto.replace(/\D/g, '').slice(0, maxLen)
-}
-
 function normalizarNombre(nombre: string) {
   return nombre.trim().replace(/\s+/g, ' ')
 }
@@ -94,8 +91,8 @@ export function FormularioEnvioForm({
   const referenciaInicialEsConocida = referenciasDisponibles.includes(referenciaInicial)
 
   const [nombre, setNombre] = useState(envio?.cliente.nombre ?? '')
-  const [dni, setDni] = useState(envio?.cliente.dni ?? '')
-  const [celular, setCelular] = useState(envio?.cliente.celular ?? '')
+  const [dni, setDni] = useState(normalizarNumero(envio?.cliente.dni ?? ''))
+  const [celular, setCelular] = useState(normalizarNumero(envio?.cliente.celular ?? ''))
   const [email, setEmail] = useState(envio?.cliente.email ?? '')
   const [courierId, setCourierId] = useState(courierInicialId)
   const [referenciaSeleccionada, setReferenciaSeleccionada] = useState(
@@ -143,8 +140,8 @@ export function FormularioEnvioForm({
     event.preventDefault()
     setError('')
 
-    const dniLimpio = limpiarTextoNumerico(dni, 8)
-    const celularLimpio = limpiarTextoNumerico(celular, 9)
+    const dniLimpio = normalizarNumero(dni)
+    const celularLimpio = normalizarNumero(celular)
     if (dniLimpio.length !== 8) {
       setError('El DNI debe contener exactamente 8 dígitos.')
       return
@@ -201,11 +198,11 @@ export function FormularioEnvioForm({
           </div>
           <div>
             <label htmlFor="envio-dni" className={labelClass}>DNI * (8 dígitos)</label>
-            <input id="envio-dni" name="dni" value={dni} onChange={(e) => setDni(limpiarTextoNumerico(e.target.value, 8))} inputMode="numeric" maxLength={8} required placeholder="70123456" className={`${inputClass} font-mono`} />
+            <input id="envio-dni" name="dni" value={dni} onChange={(e) => setDni(normalizarNumero(e.target.value))} inputMode="numeric" required placeholder="70123456" className={`${inputClass} font-mono`} />
           </div>
           <div>
             <label htmlFor="envio-celular" className={labelClass}>Celular * (9 dígitos)</label>
-            <input id="envio-celular" name="celular" value={celular} onChange={(e) => setCelular(limpiarTextoNumerico(e.target.value, 9))} inputMode="numeric" maxLength={9} required placeholder="987654321" className={`${inputClass} font-mono`} />
+            <input id="envio-celular" name="celular" value={celular} onChange={(e) => setCelular(normalizarNumero(e.target.value))} inputMode="numeric" required placeholder="987654321" className={`${inputClass} font-mono`} />
           </div>
           <div>
             <label htmlFor="envio-email" className={labelClass}>Email</label>
