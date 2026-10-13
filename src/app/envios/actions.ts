@@ -2,6 +2,24 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import {
+  consultarEnviosPaginados,
+  obtenerIdsEnviosFiltrados,
+  obtenerIdsEnviosRegistradosHoy,
+  type FiltrosEnvios,
+} from '@/lib/envios-query'
+
+export async function consultarEnvios(filtros: FiltrosEnvios) {
+  return consultarEnviosPaginados(filtros)
+}
+
+export async function consultarIdsEnvios(filtros: FiltrosEnvios) {
+  return obtenerIdsEnviosFiltrados(filtros)
+}
+
+export async function consultarIdsEnviosRegistradosHoy() {
+  return obtenerIdsEnviosRegistradosHoy()
+}
 
 export async function crearEnvio(formData: FormData) {
   const dni = (formData.get('dni') as string)?.trim()

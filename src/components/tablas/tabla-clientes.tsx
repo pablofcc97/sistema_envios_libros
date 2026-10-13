@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useEffect} from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import type { Prisma } from '@prisma/client'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { FileSpreadsheet, SquarePen, Trash2, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { eliminarCliente } from '@/app/clientes/actions'
+import {
+  consultarClientes,
+  consultarIdsClientes,
+  eliminarCliente,
+  obtenerClienteParaEdicion,
+} from '@/app/clientes/actions'
 import FormularioClienteForm from '@/components/formularios/formulario-cliente-form'
 import { DetalleClienteSheet } from '@/components/clientes/detalle-cliente-sheet'
 
@@ -13,48 +19,151 @@ import { DetalleClienteSheet } from '@/components/clientes/detalle-cliente-sheet
 import { BotonCopiar } from '@/components/ui/boton-copiar'
 import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
-import { useSeleccionLote } from '@/hooks/use-seleccion-lote'
+import type { FiltrosClientes } from '@/lib/clientes-query'
 
-export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] }) {
+type Cliente = Prisma.ClienteGetPayload<Record<string, never>>
+
+export function TablaClientes({
+  clientesIniciales,
+  totalInicial,
+  filtrosIniciales,
+}: {
+  clientesIniciales: Cliente[]
+  totalInicial: number
+  filtrosIniciales: FiltrosClientes
+}) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  const [busqueda, setBusqueda] = useState('')
-  const [clienteAEditar, setClienteAEditar] = useState<any | null>(null)
+  const [clientes, setClientes] = useState(clientesIniciales)
+  const [totalRegistros, setTotalRegistros] = useState(totalInicial)
+  const [busqueda, setBusqueda] = useState(filtrosIniciales.busqueda)
+  const [clienteAEditar, setClienteAEditar] = useState<Cliente | null>(null)
   const [modalCrearOpen, setModalCrearOpen] = useState(false)
-  const [paginaActual, setPaginaActual] = useState(1)
-  const [filasPorPagina, setFilasPorPagina] = useState(10)
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<any | null>(null)
+  const [paginaActual, setPaginaActual] = useState(filtrosIniciales.pagina)
+  const [filasPorPagina, setFilasPorPagina] = useState(filtrosIniciales.filasPorPagina)
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [sheetDetalleOpen, setSheetDetalleOpen] = useState(false)
+  const [seleccionados, setSeleccionados] = useState<string[]>([])
+  const [cargandoSeleccion, setCargandoSeleccion] = useState(false)
+  const [errorConsulta, setErrorConsulta] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const solicitudActual = useRef(0)
+  const temporizadorBusqueda = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recargarClientesRef = useRef<() => Promise<void>>(async () => {})
 
-  // 1. Filtro dinámico por Nombre, DNI, Celular o Email
-  const clientesFiltrados = clientesIniciales.filter((c) => {
-    const q = busqueda.toLowerCase()
-    return (
-      c.nombre.toLowerCase().includes(q) ||
-      c.dni.includes(q) ||
-      c.celular.includes(q) ||
-      (c.email && c.email.toLowerCase().includes(q))
-    )
+  const obtenerFiltros = (cambios: Partial<FiltrosClientes> = {}): FiltrosClientes => ({
+    busqueda,
+    pagina: paginaActual,
+    filasPorPagina,
+    ...cambios,
   })
 
-  // 2. Paginación
-  const clientesPaginados = clientesFiltrados.slice(
-    (paginaActual - 1) * filasPorPagina,
-    paginaActual * filasPorPagina
-  )
+  const aplicarResultado = (resultado: Awaited<ReturnType<typeof consultarClientes>>, filtros: FiltrosClientes) => {
+    setClientes(resultado.clientes)
+    setTotalRegistros(resultado.total)
+    setPaginaActual(filtros.pagina)
+    setFilasPorPagina(filtros.filasPorPagina)
+  }
 
-  // 3. Custom Hook de Selección en Lote
-  const {
-    seleccionados,
-    todosPaginaSeleccionados,
-    toggleSeleccionarPagina,
-    toggleSeleccionFila,
-    seleccionarTodosConsulta,
-    limpiarSeleccion,
-  } = useSeleccionLote(clientesPaginados, clientesFiltrados)
+  const cargarClientes = (filtros: FiltrosClientes) => {
+    const solicitud = ++solicitudActual.current
+    startTransition(async () => {
+      try {
+        const resultado = await consultarClientes(filtros)
+        if (solicitud !== solicitudActual.current) return
+        aplicarResultado(resultado, filtros)
+        setErrorConsulta('')
+      } catch {
+        if (solicitud === solicitudActual.current) {
+          setErrorConsulta('No se pudieron cargar los clientes. Intenta de nuevo.')
+        }
+      }
+    })
+  }
 
-  const handleVerDetalle = (cliente: any) => {
+  const recargarClientes = useCallback(async () => {
+    const solicitud = ++solicitudActual.current
+    let filtros: FiltrosClientes = { busqueda, pagina: paginaActual, filasPorPagina }
+    let resultado = await consultarClientes(filtros)
+    const ultimaPagina = Math.max(1, Math.ceil(resultado.total / filtros.filasPorPagina))
+    if (filtros.pagina > ultimaPagina) {
+      filtros = { ...filtros, pagina: ultimaPagina }
+      resultado = await consultarClientes(filtros)
+    }
+    if (solicitud !== solicitudActual.current) return
+    aplicarResultado(resultado, filtros)
+    setErrorConsulta('')
+  }, [busqueda, paginaActual, filasPorPagina])
+
+  useEffect(() => {
+    recargarClientesRef.current = recargarClientes
+  }, [recargarClientes])
+
+  useEffect(() => {
+    const actualizarClientes = () => {
+      void recargarClientesRef.current().catch(() => {
+        setErrorConsulta('No se pudieron actualizar los clientes. Intenta de nuevo.')
+      })
+    }
+    window.addEventListener('clientes:actualizados', actualizarClientes)
+    return () => {
+      window.removeEventListener('clientes:actualizados', actualizarClientes)
+      if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    }
+  }, [])
+
+  const idsPagina = clientes.map((cliente) => cliente.id)
+  const todosPaginaSeleccionados = idsPagina.length > 0 && idsPagina.every((id) => seleccionados.includes(id))
+  const limpiarSeleccion = () => setSeleccionados([])
+  const toggleSeleccionarPagina = () => {
+    setSeleccionados((actuales) => todosPaginaSeleccionados
+      ? actuales.filter((id) => !idsPagina.includes(id))
+      : Array.from(new Set([...actuales, ...idsPagina])))
+  }
+  const toggleSeleccionFila = (id: string) => {
+    setSeleccionados((actuales) => actuales.includes(id)
+      ? actuales.filter((seleccionado) => seleccionado !== id)
+      : [...actuales, id])
+  }
+
+  const seleccionarTodosConsulta = async () => {
+    setCargandoSeleccion(true)
+    try {
+      const ids = await consultarIdsClientes(busqueda)
+      setSeleccionados(ids.map((cliente) => cliente.id))
+    } catch {
+      setErrorConsulta('No se pudo seleccionar el resultado completo.')
+    } finally {
+      setCargandoSeleccion(false)
+    }
+  }
+
+  const handleBusquedaChange = (valor: string) => {
+    setBusqueda(valor)
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    temporizadorBusqueda.current = setTimeout(() => {
+      setPaginaActual(1)
+      limpiarSeleccion()
+      cargarClientes(obtenerFiltros({ busqueda: valor, pagina: 1 }))
+    }, 300)
+  }
+
+  const handlePaginaChange = (pagina: number) => {
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    setPaginaActual(pagina)
+    cargarClientes(obtenerFiltros({ pagina }))
+  }
+
+  const handleFilasPorPaginaChange = (filas: number) => {
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    setPaginaActual(1)
+    setFilasPorPagina(filas)
+    limpiarSeleccion()
+    cargarClientes(obtenerFiltros({ filasPorPagina: filas, pagina: 1 }))
+  }
+
+  const handleVerDetalle = (cliente: Cliente) => {
     setClienteSeleccionado(cliente)
     setSheetDetalleOpen(true)
   }
@@ -77,30 +186,23 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
     }
   }
 
+  const clienteIdAEditar = searchParams.get('editar')
   useEffect(() => {
-    const clienteIdAEditar = searchParams.get('editar')
-    if (clienteIdAEditar) {
-      const clienteEncontrado = clientesIniciales.find((c) => c.id === clienteIdAEditar)
-      if (clienteEncontrado) {
-        setClienteAEditar(clienteEncontrado)
-      }
-    }
-  }, [searchParams, clientesIniciales])
+    if (!clienteIdAEditar) return
+    let vigente = true
+    void obtenerClienteParaEdicion(clienteIdAEditar).then((cliente) => {
+      if (vigente && cliente) setClienteAEditar(cliente)
+    })
+    return () => { vigente = false }
+  }, [clienteIdAEditar])
 
   return (
     <div className="space-y-4">
       {/* Controles Superiores */}
       <div className="bg-slate-900 p-4 border border-slate-800 rounded-xl flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="flex flex-1 gap-3 w-full md:w-auto">
-          <BarraBusqueda
-            value={busqueda}
-            onChange={(valor) => {
-              setBusqueda(valor)
-              setPaginaActual(1)
-              limpiarSeleccion()
-            }}
-            placeholder="Buscar por Nombre, DNI, Celular o Email..."
-          />
+          <BarraBusqueda value={busqueda} onChange={handleBusquedaChange} placeholder="Buscar por Nombre, DNI, Celular o Email..." />
+          {isPending && <span className="self-center text-xs text-blue-300">Actualizando…</span>}
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -123,21 +225,28 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
         </div>
       </div>
 
+      {errorConsulta && (
+        <div role="alert" className="rounded-lg border border-rose-800 bg-rose-950/50 p-3 text-xs text-rose-300">
+          {errorConsulta}
+        </div>
+      )}
+
       {/* Banner de Selección Masiva */}
-      {todosPaginaSeleccionados && clientesFiltrados.length > clientesPaginados.length && (
+      {todosPaginaSeleccionados && totalRegistros > clientes.length && (
         <div className="bg-blue-950/60 border border-blue-800/80 rounded-lg p-2.5 text-center text-xs text-blue-200 flex items-center justify-center gap-2">
-          <span>Se han seleccionado los <strong>{clientesPaginados.length}</strong> clientes de esta página.</span>
-          {seleccionados.length < clientesFiltrados.length ? (
+          <span>Se han seleccionado los <strong>{clientes.length}</strong> clientes de esta página.</span>
+          {seleccionados.length < totalRegistros ? (
             <button
               type="button"
-              onClick={seleccionarTodosConsulta}
-              className="font-bold underline hover:text-white cursor-pointer ml-1"
+              onClick={() => void seleccionarTodosConsulta()}
+              disabled={cargandoSeleccion}
+              className="ml-1 cursor-pointer font-bold underline hover:text-white disabled:opacity-50"
             >
-              Seleccionar los {clientesFiltrados.length} clientes de la consulta completa
+              {cargandoSeleccion ? 'Seleccionando…' : `Seleccionar los ${totalRegistros} clientes de la consulta completa`}
             </button>
           ) : (
             <span className="font-semibold text-emerald-400 ml-1">
-              ✓ Todos los {clientesFiltrados.length} clientes están seleccionados.
+              ✓ Todos los {totalRegistros} clientes están seleccionados.
             </span>
           )}
         </div>
@@ -165,7 +274,7 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {clientesPaginados.map((cliente) => (
+              {clientes.map((cliente) => (
                 <tr
                   key={cliente.id}
                   onClick={() => handleVerDetalle(cliente)}
@@ -232,6 +341,10 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
                           if (confirm(`¿Eliminar al cliente ${cliente.nombre}?`)) {
                             const res = await eliminarCliente(cliente.id)
                             if (!res.success) alert(res.error)
+                            else {
+                              setSeleccionados((actuales) => actuales.filter((id) => id !== cliente.id))
+                              await recargarClientes()
+                            }
                           }
                         }}
                         className="h-8 w-8 bg-rose-600/80 hover:bg-rose-500 text-white border border-rose-500/50 rounded-lg shadow-sm cursor-pointer transition-colors"
@@ -243,7 +356,7 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
                   </td>
                 </tr>
               ))}
-              {clientesFiltrados.length === 0 && (
+              {totalRegistros === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-slate-500">
                     No se encontraron clientes coincidentes.
@@ -255,14 +368,11 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
         </div>
 
         <TablaPaginacion
-          totalRegistros={clientesFiltrados.length}
+          totalRegistros={totalRegistros}
           paginaActual={paginaActual}
           filasPorPagina={filasPorPagina}
-          onPaginaChange={setPaginaActual}
-          onFilasPorPaginaChange={(filas) => {
-            setFilasPorPagina(filas)
-            setPaginaActual(1)
-          }}
+          onPaginaChange={handlePaginaChange}
+          onFilasPorPaginaChange={handleFilasPorPaginaChange}
         />
       </div>
 
@@ -272,7 +382,10 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
           <SheetHeader className="pb-3 border-b border-slate-800">
             <SheetTitle className="text-xl font-bold text-white">Nuevo Cliente</SheetTitle>
           </SheetHeader>
-          <FormularioClienteForm onSuccess={() => setModalCrearOpen(false)} />
+          <FormularioClienteForm onSuccess={() => {
+            setModalCrearOpen(false)
+            window.dispatchEvent(new Event('clientes:actualizados'))
+          }} />
         </SheetContent>
       </Sheet>
 
@@ -285,7 +398,10 @@ export function TablaClientes({ clientesIniciales }: { clientesIniciales: any[] 
           {clienteAEditar && (
             <FormularioClienteForm
               cliente={clienteAEditar}
-              onSuccess={() => setClienteAEditar(null)}
+              onSuccess={() => {
+                handleCerrarModalEdicion(false)
+                window.dispatchEvent(new Event('clientes:actualizados'))
+              }}
             />
           )}
         </SheetContent>

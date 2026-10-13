@@ -32,14 +32,15 @@ export function ModalMarcarRegistrado({
   const [cargando, setCargando] = useState(false)
 
   if (!envio) return null
+  const envioId = envio.id
 
   async function handleSubmit(formData: FormData) {
     setCargando(true)
     try {
-      await marcarRegistrado(envio.id, formData)
+      await marcarRegistrado(envioId, formData)
       onOpenChange(false)
-    } catch (error: any) {
-      alert(error.message || 'Ocurrió un error al guardar.')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Ocurrió un error al guardar.')
     } finally {
       setCargando(false)
     }

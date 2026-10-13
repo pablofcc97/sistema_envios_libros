@@ -2,6 +2,37 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import type { Prisma } from '@prisma/client'
+import {
+  consultarClientesPaginados,
+  obtenerIdsClientesFiltrados,
+  type FiltrosClientes,
+} from '@/lib/clientes-query'
+
+export async function consultarClientes(filtros: FiltrosClientes) {
+  return consultarClientesPaginados(filtros)
+}
+
+export async function consultarIdsClientes(busqueda: string) {
+  return obtenerIdsClientesFiltrados(busqueda)
+}
+
+export async function obtenerClienteParaEdicion(id: string) {
+  return prisma.cliente.findUnique({ where: { id } })
+}
+
+const incluirEnviosHistorial = {
+  courier: true,
+  productos: { include: { producto: true } },
+} satisfies Prisma.EnvioInclude
+
+export async function obtenerHistorialCliente(clienteId: string) {
+  return prisma.envio.findMany({
+    where: { clienteId },
+    include: incluirEnviosHistorial,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+  })
+}
 
 export async function crearCliente(data: {
   nombre: string
@@ -20,8 +51,8 @@ export async function crearCliente(data: {
     })
     revalidatePath('/clientes')
     return { success: true, cliente }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Error al crear cliente' }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Error al crear cliente' }
   }
 }
 
@@ -46,8 +77,8 @@ export async function actualizarCliente(
     })
     revalidatePath('/clientes')
     return { success: true, cliente }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Error al actualizar cliente' }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Error al actualizar cliente' }
   }
 }
 
@@ -58,7 +89,7 @@ export async function eliminarCliente(id: string) {
     })
     revalidatePath('/clientes')
     return { success: true }
-  } catch (error: any) {
+  } catch {
     return { success: false, error: 'No se puede eliminar un cliente con envíos asociados.' }
   }
 }

@@ -49,10 +49,6 @@ export default async function DashboardPage() {
     }),
   ])
 
-  // Map para distribución de couriers
-  const couriersDb = await prisma.courier.findMany()
-  
-
   // Formato para Top Departamentos
   const topDepartamentos = enviosPorDepartamentoDb.map((item) => {
     const total = item._count.id

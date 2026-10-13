@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Prisma } from '@prisma/client'
+import { obtenerHistorialCliente } from '@/app/clientes/actions'
 import {
   Sheet,
   SheetContent,
@@ -13,14 +14,11 @@ import { BadgeEstado } from '@/components/ui/badge-estado'
 import { User, Phone, Mail, FileText, MapPin, Package, History, Copy, Check, AlertTriangle } from 'lucide-react'
 import { copiarTexto } from '@/lib/copiar-texto'
 
-type ClienteDetalle = Prisma.ClienteGetPayload<{
+type ClienteDetalle = Prisma.ClienteGetPayload<Record<string, never>>
+type EnvioHistorial = Prisma.EnvioGetPayload<{
   include: {
-    envios: {
-      include: {
-        courier: true
-        productos: { include: { producto: true } }
-      }
-    }
+    courier: true
+    productos: { include: { producto: true } }
   }
 }>
 
@@ -33,6 +31,31 @@ interface DetalleClienteSheetProps {
 export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClienteSheetProps) {
   const [copiadoCampo, setCopiadoCampo] = useState<string | null>(null)
   const [errorCopiaCampo, setErrorCopiaCampo] = useState<string | null>(null)
+  const [envios, setEnvios] = useState<EnvioHistorial[]>([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const [errorHistorial, setErrorHistorial] = useState('')
+  const clienteId = cliente?.id
+
+  useEffect(() => {
+    if (!open || !clienteId) return
+
+    let vigente = true
+    const cargarHistorial = async () => {
+      setCargandoHistorial(true)
+      setErrorHistorial('')
+      try {
+        const historial = await obtenerHistorialCliente(clienteId)
+        if (vigente) setEnvios(historial)
+      } catch {
+        if (vigente) setErrorHistorial('No se pudo cargar el historial de envíos.')
+      } finally {
+        if (vigente) setCargandoHistorial(false)
+      }
+    }
+
+    void cargarHistorial()
+    return () => { vigente = false }
+  }, [open, clienteId])
 
   if (!cliente) return null
 
@@ -49,7 +72,7 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
   }
 
   // Ordenar envíos de más reciente a más antiguo
-  const enviosOrdenados = [...(cliente.envios || [])].sort(
+  const enviosOrdenados = [...envios].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
 
@@ -161,7 +184,7 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
               <div className="flex items-center gap-1.5 text-slate-300">
                 <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
                 <span className="text-slate-400">Último Departamento:</span>
-                <span className="font-bold text-amber-300 uppercase ml-1">{ultimoDepartamento}</span>
+                <span className="font-bold text-amber-300 uppercase ml-1">{cargandoHistorial ? 'Cargando…' : ultimoDepartamento}</span>
               </div>
             </div>
 
@@ -173,7 +196,11 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
               <Package className="w-4 h-4 text-purple-400" /> Libros Adquiridos (Total)
             </h4>
             <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800/80">
-              {listaProductosAcumulados.length > 0 ? (
+              {cargandoHistorial ? (
+                <p className="text-xs text-slate-500">Cargando historial…</p>
+              ) : errorHistorial ? (
+                <p role="alert" className="text-xs text-rose-300">{errorHistorial}</p>
+              ) : listaProductosAcumulados.length > 0 ? (
                 <ul className="divide-y divide-slate-800/80 text-sm">
                   {listaProductosAcumulados.map(([nombreProd, cantidad]) => (
                     <li key={nombreProd} className="py-2 flex justify-between items-center first:pt-0 last:pb-0">
@@ -193,10 +220,14 @@ export function DetalleClienteSheet({ cliente, open, onOpenChange }: DetalleClie
           {/* Historial de Pedidos / Envíos */}
           <div className="space-y-2">
             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <History className="w-4 h-4 text-emerald-400" /> Historial de Pedidos ({enviosOrdenados.length})
+              <History className="w-4 h-4 text-emerald-400" /> Historial de Pedidos ({cargandoHistorial ? '…' : enviosOrdenados.length})
             </h4>
             <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 overflow-hidden">
-              {enviosOrdenados.length > 0 ? (
+              {cargandoHistorial ? (
+                <p className="p-4 text-xs text-slate-500">Cargando historial…</p>
+              ) : errorHistorial ? (
+                <p role="alert" className="p-4 text-xs text-rose-300">{errorHistorial}</p>
+              ) : enviosOrdenados.length > 0 ? (
                 <div className="divide-y divide-slate-800/80">
                   {enviosOrdenados.map((envio) => (
                     <div key={envio.id} className="p-3.5 space-y-2 hover:bg-slate-900/50 transition-colors">

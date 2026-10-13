@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import type { Courier, Prisma, Producto } from '@prisma/client'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import type { Courier, Producto } from '@prisma/client'
 import { 
   AlertTriangle,
   FileSpreadsheet, 
@@ -13,7 +13,13 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ModalMarcarRegistrado } from '@/components/modales/modal-marcar-registrado'
-import { eliminarEnvio, marcarComoRotulados } from '@/app/envios/actions'
+import {
+  consultarEnvios,
+  consultarIdsEnvios,
+  consultarIdsEnviosRegistradosHoy,
+  eliminarEnvio,
+  marcarComoRotulados,
+} from '@/app/envios/actions'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { FormularioEnvioForm } from '@/components/formularios/formulario-envio-form'
 import { DetalleEnvioSheet } from '@/components/envios/detalle-envio-sheet'
@@ -24,30 +30,41 @@ import { BadgeEstado } from '@/components/ui/badge-estado'
 import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
 
-// Custom Hook
-import { useSeleccionLote } from '@/hooks/use-seleccion-lote'
-
-type EnvioConDetalle = Prisma.EnvioGetPayload<{
-  include: {
-    cliente: true
-    courier: true
-    productos: { include: { producto: true } }
-  }
-}>
+import type { EnvioConDetalle, FiltrosEnvios } from '@/lib/envios-query'
 
 export function TablaEnvios({
   enviosIniciales,
+  totalInicial,
+  posiblesDuplicadosIniciales,
+  filtrosIniciales,
+  departamentosDisponibles,
+  idsRegistradosHoyIniciales,
   couriers,
   productos,
 }: {
   enviosIniciales: EnvioConDetalle[]
+  totalInicial: number
+  posiblesDuplicadosIniciales: Record<string, EnvioConDetalle>
+  filtrosIniciales: FiltrosEnvios
+  departamentosDisponibles: string[]
+  idsRegistradosHoyIniciales: string[]
   couriers: Courier[]
   productos: Producto[]
 }) {
-  const [busqueda, setBusqueda] = useState('')
-  const [filtroFecha, setFiltroFecha] = useState('')
-  const [filtroDepartamento, setFiltroDepartamento] = useState('')
-  const [soloConObservaciones, setSoloConObservaciones] = useState(false)
+  const [envios, setEnvios] = useState(enviosIniciales)
+  const [totalRegistros, setTotalRegistros] = useState(totalInicial)
+  const [posiblesDuplicados, setPosiblesDuplicados] = useState(posiblesDuplicadosIniciales)
+  const [busqueda, setBusqueda] = useState(filtrosIniciales.busqueda)
+  const [filtroFecha, setFiltroFecha] = useState(filtrosIniciales.fecha)
+  const [filtroDepartamento, setFiltroDepartamento] = useState(filtrosIniciales.departamento)
+  const [soloConObservaciones, setSoloConObservaciones] = useState(filtrosIniciales.soloConObservaciones)
+  const [seleccionados, setSeleccionados] = useState<string[]>([])
+  const [estadosEnvio, setEstadosEnvio] = useState<Record<string, string>>(
+    Object.fromEntries(enviosIniciales.map((envio) => [envio.id, envio.estado])),
+  )
+  const [idsRegistradosHoy, setIdsRegistradosHoy] = useState(idsRegistradosHoyIniciales)
+  const [errorConsulta, setErrorConsulta] = useState('')
+  const [cargandoSeleccion, setCargandoSeleccion] = useState(false)
   const [envioACompletar, setEnvioACompletar] = useState<{
     id: string
     clienteNombre: string
@@ -55,153 +72,203 @@ export function TablaEnvios({
     claveEnvio: string | null
   } | null>(null)
   const [envioAEditar, setEnvioAEditar] = useState<EnvioConDetalle | null>(null)
-  const [paginaActual, setPaginaActual] = useState(1)
-  const [filasPorPagina, setFilasPorPagina] = useState(10)
+  const [paginaActual, setPaginaActual] = useState(filtrosIniciales.pagina)
+  const [filasPorPagina, setFilasPorPagina] = useState(filtrosIniciales.filasPorPagina)
   const [envioSeleccionado, setEnvioSeleccionado] = useState<EnvioConDetalle | null>(null)
   const [posibleDuplicadoDe, setPosibleDuplicadoDe] = useState<EnvioConDetalle | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const solicitudActual = useRef(0)
+  const temporizadorBusqueda = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recargarEnviosRef = useRef<() => Promise<void>>(async () => {})
 
-  // Marca el envío más reciente cuando coincide el cliente y el contenido
-  // exacto con otro envío creado dentro de los cinco días anteriores.
-  const posiblesDuplicados = useMemo(() => {
-    const grupos = new Map<string, EnvioConDetalle[]>()
-    for (const envio of enviosIniciales) {
-      if (!envio.clienteId || !envio.productos?.length) continue
-      const productos = envio.productos
-        .map((item) => `${item.productoId}:${item.cantidad}`)
-        .sort()
-        .join('|')
-      const firma = `${envio.clienteId}::${productos}`
-      const grupo = grupos.get(firma) ?? []
-      grupo.push(envio)
-      grupos.set(firma, grupo)
-    }
-
-    const duplicados = new Map<string, EnvioConDetalle>()
-    const ventanaMs = 5 * 24 * 60 * 60 * 1000
-    for (const grupo of grupos.values()) {
-      grupo.sort((a, b) => (
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        || String(a.id).localeCompare(String(b.id))
-      ))
-      let anterior: EnvioConDetalle | null = null
-      for (const envio of grupo) {
-        const fecha = new Date(envio.createdAt).getTime()
-        if (
-          envio.estado !== 'rotulado'
-          && anterior
-          && fecha - new Date(anterior.createdAt).getTime() <= ventanaMs
-        ) {
-          duplicados.set(envio.id, anterior)
-        }
-        anterior = envio
-      }
-    }
-    return duplicados
-  }, [enviosIniciales])
-
-  const departamentosDisponibles = Array.from(new Set(
-    enviosIniciales
-      .map((envio) => envio.departamento?.trim())
-      .filter((departamento): departamento is string => Boolean(departamento)),
-  )).sort((a, b) => a.localeCompare(b, 'es'))
-
-  // 1. Filtrado dinámico
-  const enviosFiltrados = enviosIniciales.filter((e) => {
-    const coincideBusqueda =
-      e.cliente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      e.cliente.dni.includes(busqueda) ||
-      e.cliente.celular.includes(busqueda) ||
-      (e.cliente.email && e.cliente.email.toLowerCase().includes(busqueda.toLowerCase()))
-
-    const fechaEnvio = new Date(e.createdAt).toISOString().split('T')[0]
-    const coincideFecha = filtroFecha ? fechaEnvio === filtroFecha : true
-    const coincideDepartamento = filtroDepartamento
-      ? e.departamento === filtroDepartamento
-      : true
-    const coincideObservaciones = soloConObservaciones
-      ? Boolean(e.observaciones?.trim())
-      : true
-
-    return coincideBusqueda && coincideFecha && coincideDepartamento && coincideObservaciones
+  const obtenerFiltros = (cambios: Partial<FiltrosEnvios> = {}): FiltrosEnvios => ({
+    busqueda,
+    fecha: filtroFecha,
+    departamento: filtroDepartamento,
+    soloConObservaciones,
+    pagina: paginaActual,
+    filasPorPagina,
+    ...cambios,
   })
 
-  // 2. Paginación
-  const enviosPaginados = enviosFiltrados.slice(
-    (paginaActual - 1) * filasPorPagina,
-    paginaActual * filasPorPagina
-  )
+  const aplicarResultado = (resultado: Awaited<ReturnType<typeof consultarEnvios>>, filtros: FiltrosEnvios) => {
+    setEnvios(resultado.envios)
+    setTotalRegistros(resultado.total)
+    setPosiblesDuplicados(resultado.posiblesDuplicados)
+    setPaginaActual(filtros.pagina)
+    setFilasPorPagina(filtros.filasPorPagina)
+    setEstadosEnvio((actuales) => ({
+      ...actuales,
+      ...Object.fromEntries(resultado.envios.map((envio) => [envio.id, envio.estado])),
+    }))
+  }
 
-  // 3. Custom Hook
-  const {
-    seleccionados,
-    todosPaginaSeleccionados,
-    toggleSeleccionarPagina,
-    toggleSeleccionFila,
-    seleccionarTodosConsulta,
-    limpiarSeleccion,
-  } = useSeleccionLote(enviosPaginados, enviosFiltrados)
+  const cargarEnvios = (filtros: FiltrosEnvios) => {
+    const solicitud = ++solicitudActual.current
+    startTransition(async () => {
+      try {
+        const resultado = await consultarEnvios(filtros)
+        if (solicitud !== solicitudActual.current) return
+        aplicarResultado(resultado, filtros)
+        setErrorConsulta('')
+      } catch {
+        if (solicitud === solicitudActual.current) {
+          setErrorConsulta('No se pudieron cargar los envíos. Intenta de nuevo.')
+        }
+      }
+    })
+  }
+
+  const recargarEnvios = useCallback(async () => {
+    const solicitud = ++solicitudActual.current
+    let filtros: FiltrosEnvios = {
+      busqueda,
+      fecha: filtroFecha,
+      departamento: filtroDepartamento,
+      soloConObservaciones,
+      pagina: paginaActual,
+      filasPorPagina,
+    }
+    let resultado = await consultarEnvios(filtros)
+    const idsHoy = await consultarIdsEnviosRegistradosHoy()
+    const ultimaPagina = Math.max(1, Math.ceil(resultado.total / filtros.filasPorPagina))
+    if (filtros.pagina > ultimaPagina) {
+      filtros = { ...filtros, pagina: ultimaPagina }
+      resultado = await consultarEnvios(filtros)
+    }
+    if (solicitud !== solicitudActual.current) return
+    aplicarResultado(resultado, filtros)
+    setIdsRegistradosHoy(idsHoy)
+    setErrorConsulta('')
+  }, [busqueda, filtroFecha, filtroDepartamento, soloConObservaciones, paginaActual, filasPorPagina])
+
+  useEffect(() => {
+    recargarEnviosRef.current = recargarEnvios
+  }, [recargarEnvios])
+
+  useEffect(() => {
+    const actualizarEnvios = () => {
+      void recargarEnviosRef.current().catch(() => {
+        setErrorConsulta('No se pudieron actualizar los envíos. Intenta de nuevo.')
+      })
+    }
+    window.addEventListener('envios:actualizados', actualizarEnvios)
+    return () => {
+      window.removeEventListener('envios:actualizados', actualizarEnvios)
+      if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    }
+  }, [])
+
+  const limpiarSeleccion = () => setSeleccionados([])
+  const idsPagina = envios.map((envio) => envio.id)
+  const todosPaginaSeleccionados = idsPagina.length > 0
+    && idsPagina.every((id) => seleccionados.includes(id))
+  const toggleSeleccionarPagina = () => {
+    setSeleccionados((actuales) => todosPaginaSeleccionados
+      ? actuales.filter((id) => !idsPagina.includes(id))
+      : Array.from(new Set([...actuales, ...idsPagina])))
+  }
+  const toggleSeleccionFila = (id: string) => {
+    setSeleccionados((actuales) => actuales.includes(id)
+      ? actuales.filter((seleccionado) => seleccionado !== id)
+      : [...actuales, id])
+  }
+
+  const seleccionarTodosConsulta = async () => {
+    setCargandoSeleccion(true)
+    try {
+      const idsYEstados = await consultarIdsEnvios(obtenerFiltros())
+      setSeleccionados(idsYEstados.map((envio) => envio.id))
+      setEstadosEnvio((actuales) => ({
+        ...actuales,
+        ...Object.fromEntries(idsYEstados.map((envio) => [envio.id, envio.estado])),
+      }))
+    } catch {
+      setErrorConsulta('No se pudo seleccionar el resultado completo.')
+    } finally {
+      setCargandoSeleccion(false)
+    }
+  }
 
   // Manejadores de cambios en filtros
   const handleFechaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFiltroFecha(e.target.value)
+    const fecha = e.target.value
+    setFiltroFecha(fecha)
     setPaginaActual(1)
     limpiarSeleccion()
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    cargarEnvios(obtenerFiltros({ fecha, pagina: 1 }))
   }
 
   const handleLimpiarFecha = () => {
     setFiltroFecha('')
     setPaginaActual(1)
     limpiarSeleccion()
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    cargarEnvios(obtenerFiltros({ fecha: '', pagina: 1 }))
   }
 
   const handleDepartamentoChange = (departamento: string) => {
     setFiltroDepartamento(departamento)
     setPaginaActual(1)
     limpiarSeleccion()
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    cargarEnvios(obtenerFiltros({ departamento, pagina: 1 }))
   }
 
   const handleObservacionesChange = (activo: boolean) => {
     setSoloConObservaciones(activo)
     setPaginaActual(1)
     limpiarSeleccion()
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    cargarEnvios(obtenerFiltros({ soloConObservaciones: activo, pagina: 1 }))
   }
 
-  const hoyStr = new Date().toISOString().split('T')[0]
+  const handleBusquedaChange = (valor: string) => {
+    setBusqueda(valor)
+    if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
+    temporizadorBusqueda.current = setTimeout(() => {
+      setPaginaActual(1)
+      limpiarSeleccion()
+      cargarEnvios(obtenerFiltros({ busqueda: valor, pagina: 1 }))
+    }, 300)
+  }
 
-  // Envíos de hoy con estado 'registrado'
-  const enviosRegistradosHoy = enviosIniciales.filter((e) => {
-    const fechaEnvio = new Date(e.createdAt).toISOString().split('T')[0]
-    return fechaEnvio === hoyStr && e.estado === 'registrado'
-  })
+  const handlePaginaChange = (pagina: number) => {
+    setPaginaActual(pagina)
+    cargarEnvios(obtenerFiltros({ pagina }))
+  }
 
-  const tienePendientesHoy = enviosRegistradosHoy.length > 0
+  const handleFilasPorPaginaChange = (filas: number) => {
+    setPaginaActual(1)
+    setFilasPorPagina(filas)
+    limpiarSeleccion()
+    cargarEnvios(obtenerFiltros({ filasPorPagina: filas, pagina: 1 }))
+  }
 
-  const tieneRegistradosEnSeleccion = seleccionados.some((id) => {
-    const envio = enviosIniciales.find((e) => e.id === id)
-    return envio?.estado === 'registrado'
-  })
+  const tienePendientesHoy = idsRegistradosHoy.length > 0
+  const tieneRegistradosEnSeleccion = seleccionados.some((id) => estadosEnvio[id] === 'registrado')
 
   const handleVerDetalle = (envio: EnvioConDetalle) => {
     setEnvioSeleccionado(envio)
-    setPosibleDuplicadoDe(posiblesDuplicados.get(envio.id) ?? null)
+    setPosibleDuplicadoDe(posiblesDuplicados[envio.id] ?? null)
     setSheetOpen(true)
   }
 
   const handleRotulosPendientesHoy = () => {
-    const idsPendientesHoy = enviosRegistradosHoy.map((e) => e.id)
-    if (idsPendientesHoy.length === 0) {
+    if (idsRegistradosHoy.length === 0) {
       alert('No hay envíos pendientes de rotular con la fecha de hoy.')
       return
     }
-    window.open(`/api/rotulos?ids=${idsPendientesHoy.join(',')}`, '_blank')
+    window.open(`/api/rotulos?ids=${idsRegistradosHoy.join(',')}`, '_blank')
   }
 
   const handleMarcarPendientesHoyRotulados = async () => {
-    const idsHoy = enviosRegistradosHoy.map((e) => e.id)
-    if (idsHoy.length === 0) return
-    await marcarComoRotulados(idsHoy)
+    if (idsRegistradosHoy.length === 0) return
+    await marcarComoRotulados(idsRegistradosHoy)
     limpiarSeleccion()
+    await recargarEnvios()
   }
 
   const handleExportarExcel = () => {
@@ -221,13 +288,11 @@ export function TablaEnvios({
         <div className="flex flex-1 flex-col sm:flex-row sm:flex-wrap gap-3 w-full md:w-auto">
           <BarraBusqueda
             value={busqueda}
-            onChange={(valor) => {
-              setBusqueda(valor)
-              setPaginaActual(1)
-              limpiarSeleccion()
-            }}
+            onChange={handleBusquedaChange}
             placeholder="Buscar por Nombre, DNI, Celular o Email..."
           />
+
+          {isPending && <span className="self-center text-xs text-blue-300">Actualizando…</span>}
 
           <div className="relative flex w-full items-center sm:w-auto">
             <input
@@ -281,17 +346,15 @@ export function TablaEnvios({
               {tieneRegistradosEnSeleccion && (
                 <Button
                   onClick={async () => {
-                    const idsARotular = seleccionados.filter((id) => {
-                      const e = enviosIniciales.find((item) => item.id === id)
-                      return e?.estado === 'registrado'
-                    })
+                    const idsARotular = seleccionados.filter((id) => estadosEnvio[id] === 'registrado')
                     await marcarComoRotulados(idsARotular)
                     limpiarSeleccion()
+                    await recargarEnvios()
                   }}
                   className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 text-sm cursor-pointer"
                 >
                   <Tag className="w-4 h-4" />
-                  Marcar Rotulados ({seleccionados.filter((id) => enviosIniciales.find((e) => e.id === id)?.estado === 'registrado').length})
+                  Marcar Rotulados ({seleccionados.filter((id) => estadosEnvio[id] === 'registrado').length})
                 </Button>
               )}
 
@@ -312,7 +375,7 @@ export function TablaEnvios({
                 className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 text-sm cursor-pointer"
               >
                 <Tag className="w-4 h-4" />
-                Marcar pendientes como rotulados ({enviosRegistradosHoy.length})
+                Marcar pendientes como rotulados ({idsRegistradosHoy.length})
               </Button>
 
               <Button
@@ -320,7 +383,7 @@ export function TablaEnvios({
                 className="bg-blue-600 hover:bg-blue-500 text-white gap-2 text-sm cursor-pointer font-medium"
               >
                 <Printer className="w-4 h-4 text-blue-400" />
-                Rótulos pendientes de hoy ({enviosRegistradosHoy.length})
+                Rótulos pendientes de hoy ({idsRegistradosHoy.length})
               </Button>
             </>
           )}
@@ -341,20 +404,27 @@ export function TablaEnvios({
       </div>
 
       {/* Banner de selección masiva */}
-      {todosPaginaSeleccionados && enviosFiltrados.length > enviosPaginados.length && (
+      {errorConsulta && (
+        <div role="alert" className="rounded-lg border border-rose-800 bg-rose-950/50 p-3 text-xs text-rose-300">
+          {errorConsulta}
+        </div>
+      )}
+
+      {todosPaginaSeleccionados && totalRegistros > envios.length && (
         <div className="bg-blue-950/60 border border-blue-800/80 rounded-lg p-2.5 text-center text-xs text-blue-200 flex items-center justify-center gap-2">
-          <span>Se han seleccionado los <strong>{enviosPaginados.length}</strong> envíos de esta página.</span>
-          {seleccionados.length < enviosFiltrados.length ? (
+          <span>Se han seleccionado los <strong>{envios.length}</strong> envíos de esta página.</span>
+          {seleccionados.length < totalRegistros ? (
             <button
               type="button"
-              onClick={seleccionarTodosConsulta}
-              className="font-bold underline hover:text-white cursor-pointer ml-1"
+              onClick={() => void seleccionarTodosConsulta()}
+              disabled={cargandoSeleccion}
+              className="ml-1 cursor-pointer font-bold underline hover:text-white disabled:opacity-50"
             >
-              Seleccionar los {enviosFiltrados.length} envíos de la consulta completa
+              {cargandoSeleccion ? 'Seleccionando…' : `Seleccionar los ${totalRegistros} envíos de la consulta completa`}
             </button>
           ) : (
             <span className="font-semibold text-emerald-400 ml-1">
-              ✓ Todos los {enviosFiltrados.length} envíos están seleccionados.
+              ✓ Todos los {totalRegistros} envíos están seleccionados.
             </span>
           )}
         </div>
@@ -385,9 +455,9 @@ export function TablaEnvios({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {enviosPaginados.map((envio) => (
+              {envios.map((envio) => (
                 (() => {
-                  const duplicadoDe = posiblesDuplicados.get(envio.id)
+                  const duplicadoDe = posiblesDuplicados[envio.id]
                   return (
                 <tr
                   key={envio.id}
@@ -489,6 +559,7 @@ export function TablaEnvios({
                           variant="ghost"
                           onClick={async () => {
                             await marcarComoRotulados([envio.id])
+                            await recargarEnvios()
                           }}
                           className="h-7 px-2 text-xs bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/50 cursor-pointer"
                         >
@@ -535,6 +606,7 @@ export function TablaEnvios({
                         onClick={async () => {
                           if (confirm(`¿Estás seguro de eliminar el envío de ${envio.cliente.nombre}?`)) {
                             await eliminarEnvio(envio.id)
+                            await recargarEnvios()
                           }
                         }}
                         className="h-8 w-8 bg-rose-600/80 hover:bg-rose-500 text-white border border-rose-500/50 rounded-lg shadow-sm cursor-pointer transition-colors"
@@ -549,7 +621,7 @@ export function TablaEnvios({
                 })()
               ))}
 
-              {enviosFiltrados.length === 0 && (
+              {totalRegistros === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-slate-500">
                     No se encontraron envíos con los filtros seleccionados.
@@ -562,14 +634,11 @@ export function TablaEnvios({
 
         {/* Pie de Tabla Modularizado */}
         <TablaPaginacion
-          totalRegistros={enviosFiltrados.length}
+          totalRegistros={totalRegistros}
           paginaActual={paginaActual}
           filasPorPagina={filasPorPagina}
-          onPaginaChange={setPaginaActual}
-          onFilasPorPaginaChange={(filas) => {
-            setFilasPorPagina(filas)
-            setPaginaActual(1)
-          }}
+          onPaginaChange={handlePaginaChange}
+          onFilasPorPaginaChange={handleFilasPorPaginaChange}
         />
       </div>
 
@@ -577,7 +646,12 @@ export function TablaEnvios({
       <ModalMarcarRegistrado
         envio={envioACompletar}
         open={!!envioACompletar}
-        onOpenChange={(open) => !open && setEnvioACompletar(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEnvioACompletar(null)
+            void recargarEnvios().catch(() => setErrorConsulta('No se pudieron actualizar los envíos. Intenta de nuevo.'))
+          }
+        }}
       />
 
       <Sheet open={!!envioAEditar} onOpenChange={(open) => !open && setEnvioAEditar(null)}>
@@ -594,7 +668,10 @@ export function TablaEnvios({
               envio={envioAEditar}
               couriers={couriers}
               productos={productos}
-              onSuccess={() => setEnvioAEditar(null)}
+              onSuccess={() => {
+                setEnvioAEditar(null)
+                void recargarEnvios().catch(() => setErrorConsulta('No se pudieron actualizar los envíos. Intenta de nuevo.'))
+              }}
             />
           )}
         </SheetContent>

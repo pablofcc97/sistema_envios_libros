@@ -1,26 +1,12 @@
 import { Suspense } from 'react'
-import { prisma } from '@/lib/prisma'
+import { consultarClientesPaginados } from '@/lib/clientes-query'
 import { TablaClientes } from '@/components/tablas/tabla-clientes'
 
 export const revalidate = 0
 
 export default async function ClientesPage() {
-  const clientes = await prisma.cliente.findMany({
-    orderBy: { nombre: 'asc' },
-    include: {
-      envios: {
-        orderBy: { createdAt: 'desc' },
-        include: {
-          courier: true,
-          productos: {
-            include: {
-              producto: true,
-            },
-          },
-        },
-      },
-    },
-  })
+  const filtrosIniciales = { busqueda: '', pagina: 1, filasPorPagina: 10 }
+  const resultadoInicial = await consultarClientesPaginados(filtrosIniciales)
 
   return (
     <div className="space-y-6">
@@ -34,7 +20,11 @@ export default async function ClientesPage() {
       </div>
 
       <Suspense fallback={null}>
-        <TablaClientes clientesIniciales={clientes} />
+        <TablaClientes
+          clientesIniciales={resultadoInicial.clientes}
+          totalInicial={resultadoInicial.total}
+          filtrosIniciales={filtrosIniciales}
+        />
       </Suspense>
     </div>
   )

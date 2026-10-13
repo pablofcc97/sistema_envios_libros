@@ -58,7 +58,10 @@ export function BotonNuevoEnvio({
           couriers={couriers}
           productos={productos}
           courierPorDefectoId={courierPorDefectoId}
-          onSuccess={() => handleOpenChange(false)}
+          onSuccess={() => {
+            handleOpenChange(false)
+            window.dispatchEvent(new Event('envios:actualizados'))
+          }}
         />}
       </SheetContent>
     </Sheet>
