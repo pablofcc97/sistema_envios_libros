@@ -30,7 +30,12 @@ export async function GET(req: NextRequest) {
     include: {
       cliente: true,
       courier: true,
-      productos: { include: { producto: true } },
+      productos: {
+        include: {
+          producto: true,
+          componentesSnapshot: { orderBy: { nombreProducto: 'asc' } },
+        },
+      },
     },
   })
 
@@ -73,7 +78,15 @@ export async function GET(req: NextRequest) {
       departamento: e.departamento,
       courier: e.courier.nombre,
       claveEnvio: e.claveEnvio || '',
-      libros: e.productos.map((p) => `${p.producto.nombre} x${p.cantidad}`).join(', '),
+      libros: e.productos.map((p) => {
+        const nombre = p.producto.nombreCorto || p.producto.nombre
+        const componentes = p.componentesSnapshot
+          .map((componente) => `${componente.nombreProducto} x${componente.cantidad}`)
+          .join('; ')
+        return componentes
+          ? `${nombre} x${p.cantidad}: ${componentes}`
+          : `${nombre} x${p.cantidad}`
+      }).join(', '),
       estado: e.estado,
       fecha: e.createdAt.toLocaleDateString('es-PE'),
       observaciones: e.observaciones || '',

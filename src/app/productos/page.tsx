@@ -6,6 +6,14 @@ export const revalidate = 0
 export default async function ProductosPage() {
   const productos = await prisma.producto.findMany({
     orderBy: [{ destacado: 'desc' }, { nombre: 'asc' }],
+    include: {
+      componentesPack: {
+        include: {
+          producto: { select: { id: true, nombre: true, nombreCorto: true } },
+        },
+        orderBy: { producto: { nombre: 'asc' } },
+      },
+    },
   })
 
   return (

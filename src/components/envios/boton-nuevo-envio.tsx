@@ -12,17 +12,22 @@ type CourierOption = {
   nombre: string
   color: string
   referenciaPredeterminada: string | null
+  almacenPredeterminadoId: string | null
+  descuentaInventario: boolean
 }
 
 type ProductoOption = { id: string; nombre: string; nombreCorto: string | null }
+type AlmacenOption = { id: string; nombre: string }
 
 export function BotonNuevoEnvio({
   couriers,
   productos,
+  almacenes,
   courierPorDefectoId,
 }: {
   couriers: CourierOption[]
   productos: ProductoOption[]
+  almacenes: AlmacenOption[]
   courierPorDefectoId?: string | null
 }) {
   const searchParams = useSearchParams()
@@ -57,6 +62,7 @@ export function BotonNuevoEnvio({
           modo="crear"
           couriers={couriers}
           productos={productos}
+          almacenes={almacenes}
           courierPorDefectoId={courierPorDefectoId}
           onSuccess={() => {
             handleOpenChange(false)

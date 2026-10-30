@@ -1,33 +1,43 @@
 'use client'
 
 import { useState } from 'react'
-import { PackagePlus, SquarePen, Star, Trash2 } from 'lucide-react'
+import { PackagePlus, Settings, SquarePen, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { eliminarProducto } from '@/app/productos/actions'
 import FormularioProductoForm from '@/components/formularios/formulario-producto-form'
+import { GestionComponentesPack } from '@/components/productos/gestion-componentes-pack'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Suite Modular
 import { BotonCopiar } from '@/components/ui/boton-copiar'
 import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
 import { useSeleccionLote } from '@/hooks/use-seleccion-lote'
+import { usePreferenciaFilas } from '@/hooks/use-preferencia-filas'
 
 export function TablaProductos({ productosIniciales }: { productosIniciales: any[] }) {
   const [busqueda, setBusqueda] = useState('')
   const [productoAEditar, setProductoAEditar] = useState<any>(null)
+  const [packAConfigurar, setPackAConfigurar] = useState<any>(null)
   const [modalCrearOpen, setModalCrearOpen] = useState(false)
   const [paginaActual, setPaginaActual] = useState(1)
-  const [filasPorPagina, setFilasPorPagina] = useState(10)
+  const { filasPorPagina, guardarFilasPorPagina } = usePreferenciaFilas()
+  const [categoria, setCategoria] = useState<'individuales' | 'packs'>('individuales')
 
   // 1. Filtro dinámico por Nombre, Nombre Corto o Año
-  const productosFiltrados = productosIniciales.filter((p) => {
+  const productosCategoria = productosIniciales.filter((p) => categoria === 'packs' ? p.esPack : !p.esPack)
+  const productosFiltrados = productosCategoria.filter((p) => {
     const q = busqueda.toLowerCase()
     return (
       p.nombre.toLowerCase().includes(q) ||
       (p.nombreCorto && p.nombreCorto.toLowerCase().includes(q)) ||
-      (p.anio && String(p.anio).includes(q))
+      (p.anio && String(p.anio).includes(q)) ||
+      (p.esPack && p.componentesPack?.some(({ producto }: any) =>
+        producto.nombre.toLowerCase().includes(q) ||
+        (producto.nombreCorto && producto.nombreCorto.toLowerCase().includes(q)),
+      ))
     )
   })
 
@@ -36,6 +46,7 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
     (paginaActual - 1) * filasPorPagina,
     paginaActual * filasPorPagina
   )
+  const productosIndividuales = productosIniciales.filter((producto) => !producto.esPack)
 
   // 3. Custom Hook de Selección
   const {
@@ -58,7 +69,7 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
               setPaginaActual(1)
               limpiarSeleccion()
             }}
-            placeholder="Buscar por Nombre, Nombre Corto o Año..."
+            placeholder={categoria === 'packs' ? 'Buscar packs o sus componentes...' : 'Buscar productos por nombre, nombre corto o año...'}
           />
         </div>
 
@@ -73,6 +84,21 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
         </div>
       </div>
 
+      <Tabs value={categoria} onValueChange={(value) => {
+        setCategoria(value as 'individuales' | 'packs')
+        setPaginaActual(1)
+        limpiarSeleccion()
+      }} className="space-y-4">
+      <TabsList className="w-full justify-start border border-slate-800 bg-slate-900 p-1 text-slate-400 sm:w-fit">
+        <TabsTrigger value="individuales" className="cursor-pointer data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+          Productos individuales ({productosIniciales.filter((p) => !p.esPack).length})
+        </TabsTrigger>
+        <TabsTrigger value="packs" className="cursor-pointer data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+          Packs ({productosIniciales.filter((p) => p.esPack).length})
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value={categoria}>
       {/* Tabla */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
@@ -89,6 +115,7 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
                 </th>
                 <th className="p-3">Nombre del Producto / Libro</th>
                 <th className="p-3">Nombre Corto</th>
+                <th className="p-3 text-center">Tipo</th>
                 <th className="p-3 text-center">Destacado</th>
                 <th className="p-3 text-center">Año / Edición</th>
                 <th className="p-3 text-center">Precio Referencial</th>
@@ -124,6 +151,16 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
                   </td>
 
                   <td className="p-3 text-center">
+                    {producto.esPack ? (
+                      <Badge variant="outline" className="border-blue-800 bg-blue-950/50 text-blue-200">
+                        Pack · {producto.componentesPack.length} componentes
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-slate-500">Individual</span>
+                    )}
+                  </td>
+
+                  <td className="p-3 text-center">
                     {producto.destacado ? (
                       <Badge variant="outline" className="gap-1 border-amber-700 bg-amber-950/50 text-amber-300">
                         <Star className="h-3 w-3 fill-current" />
@@ -151,6 +188,18 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
                   {/* Acciones directas visibles */}
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-1.5">
+                      {producto.esPack && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          onClick={() => setPackAConfigurar(producto)}
+                          className="h-8 w-8 cursor-pointer rounded-lg border border-blue-500/50 bg-blue-600/80 text-white shadow-sm hover:bg-blue-500"
+                          title="Configurar componentes del pack"
+                          aria-label={`Configurar componentes de ${producto.nombre}`}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      )}
                       {/* Editar */}
                       <Button
                         type="button"
@@ -184,8 +233,8 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
 
               {productosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-slate-500">
-                    No se encontraron productos coincidentes.
+                  <td colSpan={8} className="text-center py-8 text-slate-500">
+                    {categoria === 'packs' ? 'No se encontraron packs coincidentes.' : 'No se encontraron productos individuales coincidentes.'}
                   </td>
                 </tr>
               )}
@@ -199,11 +248,13 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
           filasPorPagina={filasPorPagina}
           onPaginaChange={setPaginaActual}
           onFilasPorPaginaChange={(filas) => {
-            setFilasPorPagina(filas)
+            guardarFilasPorPagina(filas)
             setPaginaActual(1)
           }}
         />
       </div>
+      </TabsContent>
+      </Tabs>
 
       {/* Sheet Crear */}
       <Sheet open={modalCrearOpen} onOpenChange={setModalCrearOpen}>
@@ -225,6 +276,25 @@ export function TablaProductos({ productosIniciales }: { productosIniciales: any
             <FormularioProductoForm
               producto={productoAEditar}
               onSuccess={() => setProductoAEditar(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={!!packAConfigurar} onOpenChange={(open) => !open && setPackAConfigurar(null)}>
+        <SheetContent className="overflow-y-auto border-slate-800 bg-slate-950 p-6 text-slate-100 sm:max-w-lg">
+          <SheetHeader className="border-b border-slate-800 pb-3">
+            <SheetTitle className="text-xl font-bold text-white">
+              Componentes del pack
+            </SheetTitle>
+          </SheetHeader>
+          {packAConfigurar && (
+            <GestionComponentesPack
+              packId={packAConfigurar.id}
+              packNombre={packAConfigurar.nombreCorto || packAConfigurar.nombre}
+              componentesIniciales={packAConfigurar.componentesPack}
+              productosDisponibles={productosIndividuales}
+              onSuccess={() => setPackAConfigurar(null)}
             />
           )}
         </SheetContent>

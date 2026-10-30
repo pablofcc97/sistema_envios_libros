@@ -3,16 +3,25 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
-export async function crearCourier(nombre: string, color: string, referenciaPredeterminada: string | null) {
+export async function crearCourier(
+  nombre: string,
+  color: string,
+  referenciaPredeterminada: string | null,
+  almacenPredeterminadoId: string | null,
+  descuentaInventario: boolean,
+) {
   try {
     const courier = await prisma.courier.create({
       data: {
         nombre: nombre.trim(),
         color,
         referenciaPredeterminada,
+        almacenPredeterminadoId: almacenPredeterminadoId || null,
+        descuentaInventario,
       },
     })
     revalidatePath('/configuracion')
+    revalidatePath('/envios')
     return { success: true, courier }
   } catch (error: any) {
     return { success: false, error: 'El courier ya existe o no se pudo crear.' }
@@ -24,6 +33,8 @@ export async function actualizarCourier(
   nombre: string,
   color: string,
   referenciaPredeterminada: string | null,
+  almacenPredeterminadoId: string | null,
+  descuentaInventario: boolean,
 ) {
   try {
     const courier = await prisma.courier.update({
@@ -32,9 +43,12 @@ export async function actualizarCourier(
         nombre: nombre.trim(),
         color,
         referenciaPredeterminada,
+        almacenPredeterminadoId: almacenPredeterminadoId || null,
+        descuentaInventario,
       },
     })
     revalidatePath('/configuracion')
+    revalidatePath('/envios')
     return { success: true, courier }
   } catch (error: any) {
     return { success: false, error: 'No se pudo actualizar el courier.' }

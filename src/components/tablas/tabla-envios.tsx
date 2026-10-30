@@ -31,6 +31,7 @@ import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
 
 import type { EnvioConDetalle, FiltrosEnvios } from '@/lib/envios-query'
+import { usePreferenciaFilas } from '@/hooks/use-preferencia-filas'
 
 export function TablaEnvios({
   enviosIniciales,
@@ -41,6 +42,7 @@ export function TablaEnvios({
   idsRegistradosHoyIniciales,
   couriers,
   productos,
+  almacenes,
 }: {
   enviosIniciales: EnvioConDetalle[]
   totalInicial: number
@@ -50,6 +52,7 @@ export function TablaEnvios({
   idsRegistradosHoyIniciales: string[]
   couriers: Courier[]
   productos: Producto[]
+  almacenes: { id: string; nombre: string }[]
 }) {
   const [envios, setEnvios] = useState(enviosIniciales)
   const [totalRegistros, setTotalRegistros] = useState(totalInicial)
@@ -73,7 +76,7 @@ export function TablaEnvios({
   } | null>(null)
   const [envioAEditar, setEnvioAEditar] = useState<EnvioConDetalle | null>(null)
   const [paginaActual, setPaginaActual] = useState(filtrosIniciales.pagina)
-  const [filasPorPagina, setFilasPorPagina] = useState(filtrosIniciales.filasPorPagina)
+  const { filasPorPagina, guardarFilasPorPagina, preferenciaLista } = usePreferenciaFilas()
   const [envioSeleccionado, setEnvioSeleccionado] = useState<EnvioConDetalle | null>(null)
   const [posibleDuplicadoDe, setPosibleDuplicadoDe] = useState<EnvioConDetalle | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -97,7 +100,6 @@ export function TablaEnvios({
     setTotalRegistros(resultado.total)
     setPosiblesDuplicados(resultado.posiblesDuplicados)
     setPaginaActual(filtros.pagina)
-    setFilasPorPagina(filtros.filasPorPagina)
     setEstadosEnvio((actuales) => ({
       ...actuales,
       ...Object.fromEntries(resultado.envios.map((envio) => [envio.id, envio.estado])),
@@ -146,6 +148,20 @@ export function TablaEnvios({
   useEffect(() => {
     recargarEnviosRef.current = recargarEnvios
   }, [recargarEnvios])
+
+  useEffect(() => {
+    if (!preferenciaLista || filasPorPagina === filtrosIniciales.filasPorPagina) return
+    setPaginaActual(1)
+    limpiarSeleccion()
+    cargarEnvios({
+      busqueda,
+      fecha: filtroFecha,
+      departamento: filtroDepartamento,
+      soloConObservaciones,
+      pagina: 1,
+      filasPorPagina,
+    })
+  }, [preferenciaLista, filasPorPagina, filtrosIniciales.filasPorPagina])
 
   useEffect(() => {
     const actualizarEnvios = () => {
@@ -242,9 +258,8 @@ export function TablaEnvios({
 
   const handleFilasPorPaginaChange = (filas: number) => {
     setPaginaActual(1)
-    setFilasPorPagina(filas)
     limpiarSeleccion()
-    cargarEnvios(obtenerFiltros({ filasPorPagina: filas, pagina: 1 }))
+    guardarFilasPorPagina(filas)
   }
 
   const tienePendientesHoy = idsRegistradosHoy.length > 0
@@ -668,6 +683,7 @@ export function TablaEnvios({
               envio={envioAEditar}
               couriers={couriers}
               productos={productos}
+              almacenes={almacenes}
               onSuccess={() => {
                 setEnvioAEditar(null)
                 void recargarEnvios().catch(() => setErrorConsulta('No se pudieron actualizar los envíos. Intenta de nuevo.'))

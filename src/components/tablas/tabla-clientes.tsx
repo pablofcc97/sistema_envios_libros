@@ -20,6 +20,7 @@ import { BotonCopiar } from '@/components/ui/boton-copiar'
 import { TablaPaginacion } from '@/components/tablas/comunes/tabla-paginacion'
 import { BarraBusqueda } from '@/components/tablas/comunes/barra-busqueda'
 import type { FiltrosClientes } from '@/lib/clientes-query'
+import { usePreferenciaFilas } from '@/hooks/use-preferencia-filas'
 
 type Cliente = Prisma.ClienteGetPayload<Record<string, never>>
 
@@ -41,7 +42,7 @@ export function TablaClientes({
   const [clienteAEditar, setClienteAEditar] = useState<Cliente | null>(null)
   const [modalCrearOpen, setModalCrearOpen] = useState(false)
   const [paginaActual, setPaginaActual] = useState(filtrosIniciales.pagina)
-  const [filasPorPagina, setFilasPorPagina] = useState(filtrosIniciales.filasPorPagina)
+  const { filasPorPagina, guardarFilasPorPagina, preferenciaLista } = usePreferenciaFilas()
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [sheetDetalleOpen, setSheetDetalleOpen] = useState(false)
   const [seleccionados, setSeleccionados] = useState<string[]>([])
@@ -63,7 +64,6 @@ export function TablaClientes({
     setClientes(resultado.clientes)
     setTotalRegistros(resultado.total)
     setPaginaActual(filtros.pagina)
-    setFilasPorPagina(filtros.filasPorPagina)
   }
 
   const cargarClientes = (filtros: FiltrosClientes) => {
@@ -99,6 +99,13 @@ export function TablaClientes({
   useEffect(() => {
     recargarClientesRef.current = recargarClientes
   }, [recargarClientes])
+
+  useEffect(() => {
+    if (!preferenciaLista || filasPorPagina === filtrosIniciales.filasPorPagina) return
+    setPaginaActual(1)
+    limpiarSeleccion()
+    cargarClientes({ busqueda, pagina: 1, filasPorPagina })
+  }, [preferenciaLista, filasPorPagina, filtrosIniciales.filasPorPagina])
 
   useEffect(() => {
     const actualizarClientes = () => {
@@ -158,9 +165,8 @@ export function TablaClientes({
   const handleFilasPorPaginaChange = (filas: number) => {
     if (temporizadorBusqueda.current) clearTimeout(temporizadorBusqueda.current)
     setPaginaActual(1)
-    setFilasPorPagina(filas)
     limpiarSeleccion()
-    cargarClientes(obtenerFiltros({ filasPorPagina: filas, pagina: 1 }))
+    guardarFilasPorPagina(filas)
   }
 
   const handleVerDetalle = (cliente: Cliente) => {

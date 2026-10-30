@@ -16,10 +16,11 @@ export default async function EnviosPage() {
     filasPorPagina: 10,
   }
 
-  const [resultadoInicial, couriers, productos, config, gruposDepartamento, idsRegistradosHoy] = await Promise.all([
+  const [resultadoInicial, couriers, productos, almacenes, config, gruposDepartamento, idsRegistradosHoy] = await Promise.all([
     consultarEnviosPaginados(filtrosIniciales),
     prisma.courier.findMany({ orderBy: { nombre: 'asc' } }),
     prisma.producto.findMany({ orderBy: { nombre: 'asc' } }),
+    prisma.almacen.findMany({ orderBy: { nombre: 'asc' } }),
     prisma.configuracion.findUnique({ where: { id: 'global' } }),
     prisma.envio.groupBy({
       by: ['departamento'],
@@ -44,6 +45,7 @@ export default async function EnviosPage() {
           <BotonNuevoEnvio 
             couriers={couriers} 
             productos={productos} 
+            almacenes={almacenes}
             courierPorDefectoId={config?.courierPorDefectoId} 
           />
         </Suspense>
@@ -59,6 +61,7 @@ export default async function EnviosPage() {
         idsRegistradosHoyIniciales={idsRegistradosHoy}
         couriers={couriers}
         productos={productos}
+        almacenes={almacenes}
       />
     </div>
   )

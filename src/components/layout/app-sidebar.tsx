@@ -6,20 +6,26 @@ import { useState } from 'react'
 import { 
   Menu,
   X,
+  Boxes,
   Package, 
   Users, 
   BookOpen, 
   LayoutDashboard, 
   Settings, 
-  Truck
+  Truck,
+  Warehouse
 } from 'lucide-react'
 
-const navigation = [
+const navigationPrincipal = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Envíos', href: '/envios', icon: Package },
   { name: 'Clientes', href: '/clientes', icon: Users },
+]
+
+const navigationInventario = [
   { name: 'Productos', href: '/productos', icon: BookOpen },
-  { name: 'Configuración', href: '/configuracion', icon: Settings },
+  { name: 'Existencias', href: '/inventario', icon: Boxes },
+  { name: 'Almacenes', href: '/inventario/almacenes', icon: Warehouse },
 ]
 
 export function AppSidebar() {
@@ -61,7 +67,7 @@ export function AppSidebar() {
 
         {/* Menú de Navegación */}
         <nav className="flex-1 space-y-1 p-4">
-          {navigation.map((item) => {
+          {navigationPrincipal.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
 
@@ -81,6 +87,53 @@ export function AppSidebar() {
               </Link>
             )
           })}
+
+          <div className="pb-1 pt-5">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Inventario
+            </p>
+          </div>
+
+          <div className="space-y-1 pl-2">
+            {navigationInventario.map((item) => {
+              const isActive = pathname === item.href
+              const Icon = item.icon
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setAbierto(false)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              )
+            })}
+
+          </div>
+
+          <div className="my-4 border-t border-slate-800" />
+
+          <Link
+            href="/configuracion"
+            onClick={() => setAbierto(false)}
+            aria-current={pathname === '/configuracion' ? 'page' : undefined}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              pathname === '/configuracion'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100'
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            Configuración
+          </Link>
         </nav>
 
         {/* Pie del Sidebar */}

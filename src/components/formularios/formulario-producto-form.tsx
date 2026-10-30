@@ -11,6 +11,7 @@ interface FormularioProductoProps {
     nombre: string
     nombreCorto?: string | null
     destacado?: boolean
+    esPack?: boolean
     precio?: number | null
     anio?: number | null
   } | null
@@ -27,6 +28,7 @@ export default function FormularioProductoForm({
   const [nombre, setNombre] = useState(producto?.nombre || '')
   const [nombreCorto, setNombreCorto] = useState(producto?.nombreCorto || '')
   const [destacado, setDestacado] = useState(producto?.destacado ?? false)
+  const [esPack, setEsPack] = useState(producto?.esPack ?? false)
   const [precio, setPrecio] = useState<string>(
     producto?.precio !== undefined && producto?.precio !== null ? String(producto.precio) : ''
   )
@@ -43,6 +45,7 @@ export default function FormularioProductoForm({
       nombre,
       nombreCorto,
       destacado,
+      esPack,
       precio: precio ? parseFloat(precio) : 0,
       anio: anio ? parseInt(anio) : 2026,
     }
@@ -101,6 +104,21 @@ export default function FormularioProductoForm({
           className="h-4 w-4 rounded accent-amber-500"
         />
         Mostrar en productos destacados al registrar envíos
+      </label>
+
+      <label className="flex items-start gap-2 rounded-lg border border-blue-900/70 bg-blue-950/30 px-3 py-2.5 text-sm text-slate-200 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={esPack}
+          onChange={(e) => setEsPack(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded accent-blue-500"
+        />
+        <span>
+          <span className="block font-medium">Es un pack compuesto</span>
+          <span className="mt-0.5 block text-xs text-slate-400">
+            El stock se controlará mediante sus productos componentes.
+          </span>
+        </span>
       </label>
 
       <div className="grid grid-cols-2 gap-3">

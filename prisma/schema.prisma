@@ -22,12 +22,18 @@ model Producto {
   nombre      String
   nombreCorto String?  // Campo nuevo para etiquetas y rótulos
   destacado   Boolean  @default(false)
+  esPack      Boolean  @default(false)
   precio      Float?   @default(0.0)
   anio        Int?     @default(2026)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
-  envios      EnvioProducto[]
+  envios                  EnvioProducto[]
+  existenciasAlmacen      ExistenciaAlmacen[]
+  movimientosInventario   MovimientoInventario[]
+  componentesPack         ComponentePack[] @relation("ProductoPack")
+  usadoEnPacks            ComponentePack[] @relation("ProductoComponentePack")
+  snapshotsEnvioPack      EnvioProductoComponente[]
 }
 
 model Courier {
@@ -35,6 +41,9 @@ model Courier {
   nombre                   String          @unique
   color                    String          @default("#2563EB")
   referenciaPredeterminada String?
+  almacenPredeterminadoId  String?
+  almacenPredeterminado    Almacen?        @relation("CourierAlmacenPredeterminado", fields: [almacenPredeterminadoId], references: [id], onDelete: SetNull)
+  descuentaInventario      Boolean         @default(true)
   envios                   Envio[]
   configuraciones          Configuracion[]
   createdAt                DateTime        @default(now())
@@ -53,9 +62,60 @@ model Envio {
   claveEnvio    String?         // Opcional en estado 'pendiente'
   observaciones String?
   estado        String          @default("pendiente")
+  almacenId     String?
+  almacen       Almacen?        @relation(fields: [almacenId], references: [id], onDelete: SetNull)
+  inventarioProcesado Boolean   @default(false)
+  stockDescontado Boolean       @default(false)
   productos     EnvioProducto[]
+  movimientosInventario MovimientoInventario[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+}
+
+model Almacen {
+  id                         String    @id @default(cuid())
+  nombre                     String    @unique
+  couriersConAlmacenDefault  Courier[] @relation("CourierAlmacenPredeterminado")
+  envios                     Envio[]
+  existencias                ExistenciaAlmacen[]
+  movimientosInventario      MovimientoInventario[]
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @default(now()) @updatedAt
+}
+
+model ExistenciaAlmacen {
+  id         String   @id @default(cuid())
+  almacenId  String
+  almacen    Almacen  @relation(fields: [almacenId], references: [id], onDelete: Restrict)
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  cantidad   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@unique([almacenId, productoId])
+  @@index([productoId])
+}
+
+model MovimientoInventario {
+  id         String   @id @default(cuid())
+  tipo       String
+  // Delta aplicado a la existencia: positivo suma y negativo resta.
+  cantidad   Int
+  motivo     String?
+  operacionId String?
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  almacenId  String
+  almacen    Almacen  @relation(fields: [almacenId], references: [id], onDelete: Restrict)
+  envioId    String?
+  envio      Envio?   @relation(fields: [envioId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([almacenId, createdAt])
+  @@index([productoId, createdAt])
+  @@index([envioId])
+  @@index([operacionId])
 }
 
 model Configuracion {
@@ -72,6 +132,33 @@ model EnvioProducto {
   producto   Producto @relation(fields: [productoId], references: [id])
   productoId String
   cantidad   Int      @default(1)
+  componentesSnapshot EnvioProductoComponente[]
 
   @@unique([envioId, productoId])
+}
+
+model ComponentePack {
+  id         String   @id @default(cuid())
+  packId     String
+  pack       Producto @relation("ProductoPack", fields: [packId], references: [id], onDelete: Cascade)
+  productoId String
+  producto   Producto @relation("ProductoComponentePack", fields: [productoId], references: [id], onDelete: Restrict)
+  cantidad   Int      @default(1)
+
+  @@unique([packId, productoId])
+  @@index([productoId])
+}
+
+model EnvioProductoComponente {
+  id               String       @id @default(cuid())
+  envioProductoId  String
+  envioProducto    EnvioProducto @relation(fields: [envioProductoId], references: [id], onDelete: Cascade)
+  productoId       String
+  producto         Producto     @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  nombreProducto   String
+  nombreCorto      String?
+  cantidad         Int
+
+  @@unique([envioProductoId, productoId])
+  @@index([productoId])
 }

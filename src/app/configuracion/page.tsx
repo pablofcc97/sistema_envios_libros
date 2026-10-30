@@ -7,8 +7,12 @@ import { FormularioPreferencias } from '@/components/configuracion/formulario-pr
 export const revalidate = 0
 
 export default async function ConfiguracionPage() {
-  const [couriers, config] = await Promise.all([
-    prisma.courier.findMany({ orderBy: { nombre: 'asc' } }),
+  const [couriers, almacenes, config] = await Promise.all([
+    prisma.courier.findMany({
+      orderBy: { nombre: 'asc' },
+      include: { almacenPredeterminado: { select: { id: true, nombre: true } } },
+    }),
+    prisma.almacen.findMany({ orderBy: { nombre: 'asc' } }),
     prisma.configuracion.findUnique({ where: { id: 'global' } }),
   ])
 
@@ -54,7 +58,7 @@ export default async function ConfiguracionPage() {
 
         {/* Pestaña 1: Couriers */}
         <TabsContent value="couriers">
-          <GestionCouriers couriersIniciales={couriers} />
+          <GestionCouriers couriersIniciales={couriers} almacenes={almacenes} />
         </TabsContent>
 
         {/* Pestaña 2: Remitente */}

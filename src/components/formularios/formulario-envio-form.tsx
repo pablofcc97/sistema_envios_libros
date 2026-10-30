@@ -20,14 +20,20 @@ type Courier = {
   nombre: string
   color?: string
   referenciaPredeterminada?: string | null
+  almacenPredeterminadoId?: string | null
+  descuentaInventario: boolean
 }
 
 type Producto = { id: string; nombre: string; nombreCorto?: string | null; destacado?: boolean }
+type Almacen = { id: string; nombre: string }
 
 type EnvioInicial = {
   id: string
   clienteId: string
   courierId: string
+  almacenId: string | null
+  inventarioProcesado: boolean
+  stockDescontado: boolean
   departamento: string
   referencia: string | null
   direccion: string | null
@@ -48,6 +54,7 @@ interface FormularioEnvioFormProps {
   modo: 'crear' | 'editar'
   couriers: Courier[]
   productos: Producto[]
+  almacenes: Almacen[]
   courierPorDefectoId?: string | null
   envio?: EnvioInicial
   onSuccess: () => void
@@ -69,6 +76,7 @@ export function FormularioEnvioForm({
   modo,
   couriers,
   productos,
+  almacenes,
   courierPorDefectoId,
   envio,
   onSuccess,
@@ -95,6 +103,9 @@ export function FormularioEnvioForm({
   const [celular, setCelular] = useState(normalizarNumero(envio?.cliente.celular ?? ''))
   const [email, setEmail] = useState(envio?.cliente.email ?? '')
   const [courierId, setCourierId] = useState(courierInicialId)
+  const [almacenId, setAlmacenId] = useState(
+    envio?.almacenId || courierInicial?.almacenPredeterminadoId || '',
+  )
   const [referenciaSeleccionada, setReferenciaSeleccionada] = useState(
     referenciaInicial && !referenciaInicialEsConocida ? OTRA_REFERENCIA : referenciaInicial,
   )
@@ -132,6 +143,7 @@ export function FormularioEnvioForm({
   const handleCourierChange = (nuevoCourierId: string) => {
     setCourierId(nuevoCourierId)
     const courier = couriers.find((item) => item.id === nuevoCourierId)
+    setAlmacenId(courier?.almacenPredeterminadoId || '')
     setReferenciaSeleccionada(courier?.referenciaPredeterminada?.trim() || '')
     setReferenciaOtro('')
   }
@@ -216,6 +228,11 @@ export function FormularioEnvioForm({
 
       <section className={seccionClass}>
         <h3 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-2">Envío</h3>
+        {esEdicion && envio && !envio.inventarioProcesado && (
+          <p className="rounded-lg border border-amber-800/70 bg-amber-950/30 p-2.5 text-xs text-amber-200">
+            Este envío es anterior al control de inventario. Al editarlo se guardarán los datos, pero no se descontará stock retroactivamente.
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="envio-courier" className={labelClass}>Courier *</label>
@@ -232,6 +249,28 @@ export function FormularioEnvioForm({
             </select>
           </div>
           <div>
+            <label htmlFor="envio-almacen" className={labelClass}>
+              Almacén de salida{couriers.find((courier) => courier.id === courierId)?.descuentaInventario ? ' *' : ''}
+            </label>
+            <select
+              id="envio-almacen"
+              name="almacenId"
+              value={almacenId}
+              onChange={(event) => setAlmacenId(event.target.value)}
+              required={Boolean(couriers.find((courier) => courier.id === courierId)?.descuentaInventario)}
+              disabled={almacenes.length === 0}
+              className={`${inputClass} cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              <option value="">Selecciona almacén</option>
+              {almacenes.map((almacen) => (
+                <option key={almacen.id} value={almacen.id}>{almacen.nombre}</option>
+              ))}
+            </select>
+            {almacenes.length === 0 && couriers.find((courier) => courier.id === courierId)?.descuentaInventario && (
+              <p className="mt-1 text-[11px] text-amber-300">Crea un almacén y registra existencias antes de usar esta courier.</p>
+            )}
+          </div>
+          <div>
             <label htmlFor="envio-referencia" className={labelClass}>Referencia</label>
             <select id="envio-referencia" value={referenciaSeleccionada} onChange={(e) => setReferenciaSeleccionada(e.target.value)} className={`${inputClass} cursor-pointer`}>
               <option value="">Sin referencia</option>
@@ -243,7 +282,7 @@ export function FormularioEnvioForm({
             )}
             <input type="hidden" name="referencia" value={referenciaSeleccionada === OTRA_REFERENCIA ? referenciaOtro : referenciaSeleccionada} />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label htmlFor="envio-clave" className={labelClass}>Clave de envío (opcional)</label>
             <input id="envio-clave" name="claveEnvio" defaultValue={envio?.claveEnvio ?? ''} placeholder="Ej. 1234" className={`${inputClass} font-mono`} />
           </div>

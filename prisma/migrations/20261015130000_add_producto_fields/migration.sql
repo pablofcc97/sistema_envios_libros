@@ -1,0 +1,5 @@
+ALTER TABLE "Producto" ADD COLUMN "nombreCorto" TEXT;
+
+ALTER TABLE "Producto" ADD COLUMN "precio" REAL DEFAULT 0.0;
+
+ALTER TABLE "Producto" ADD COLUMN "anio" INTEGER DEFAULT 2026;

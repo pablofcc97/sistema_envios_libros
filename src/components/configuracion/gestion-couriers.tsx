@@ -16,13 +16,19 @@ interface GestionCouriersProps {
     nombre: string
     color: string
     referenciaPredeterminada: string | null
+    almacenPredeterminadoId: string | null
+    almacenPredeterminado: { id: string; nombre: string } | null
+    descuentaInventario: boolean
   }[]
+  almacenes: { id: string; nombre: string }[]
 }
 
-export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
+export function GestionCouriers({ couriersIniciales, almacenes }: GestionCouriersProps) {
   const [nombre, setNombre] = useState('')
   const [color, setColor] = useState('#2563EB')
   const [referenciaPredeterminada, setReferenciaPredeterminada] = useState('')
+  const [almacenPredeterminadoId, setAlmacenPredeterminadoId] = useState('')
+  const [descuentaInventario, setDescuentaInventario] = useState(true)
   const [courierAEditar, setCourierAEditar] = useState<GestionCouriersProps['couriersIniciales'][number] | null>(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
@@ -35,8 +41,21 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
     setError('')
 
     const res = courierAEditar
-      ? await actualizarCourier(courierAEditar.id, nombre, color, referenciaPredeterminada.trim() || null)
-      : await crearCourier(nombre, color, referenciaPredeterminada.trim() || null)
+      ? await actualizarCourier(
+          courierAEditar.id,
+          nombre,
+          color,
+          referenciaPredeterminada.trim() || null,
+          almacenPredeterminadoId || null,
+          descuentaInventario,
+        )
+      : await crearCourier(
+          nombre,
+          color,
+          referenciaPredeterminada.trim() || null,
+          almacenPredeterminadoId || null,
+          descuentaInventario,
+        )
 
     setCargando(false)
 
@@ -44,6 +63,8 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
       setNombre('')
       setColor('#2563EB')
       setReferenciaPredeterminada('')
+      setAlmacenPredeterminadoId('')
+      setDescuentaInventario(true)
       setCourierAEditar(null)
     } else {
       setError(res.error || 'Ocurrió un error')
@@ -55,6 +76,8 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
     setNombre(courier.nombre)
     setColor(courier.color)
     setReferenciaPredeterminada(courier.referenciaPredeterminada || '')
+    setAlmacenPredeterminadoId(courier.almacenPredeterminadoId || '')
+    setDescuentaInventario(courier.descuentaInventario)
     setError('')
   }
 
@@ -63,6 +86,8 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
     setNombre('')
     setColor('#2563EB')
     setReferenciaPredeterminada('')
+    setAlmacenPredeterminadoId('')
+    setDescuentaInventario(true)
     setError('')
   }
 
@@ -111,6 +136,38 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
                 />
               </label>
             </div>
+            <label className="block space-y-1 text-xs text-slate-400">
+              Almacén predeterminado (opcional)
+              <select
+                value={almacenPredeterminadoId}
+                onChange={(e) => setAlmacenPredeterminadoId(e.target.value)}
+                className="h-9 w-full rounded-md border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus-visible:border-blue-500"
+              >
+                <option value="">Sin almacén predeterminado</option>
+                {almacenes.map((almacen) => (
+                  <option key={almacen.id} value={almacen.id}>
+                    {almacen.nombre}
+                  </option>
+                ))}
+              </select>
+              {almacenes.length === 0 && (
+                <span className="block text-[11px] text-slate-500">
+                  Primero registra un almacén en Inventario.
+                </span>
+              )}
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/70 p-3 text-xs text-slate-300">
+              <input
+                type="checkbox"
+                checked={descuentaInventario}
+                onChange={(event) => setDescuentaInventario(event.target.checked)}
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-blue-600"
+              />
+              <span>
+                <span className="block font-medium text-slate-200">Descuenta stock al registrar envíos</span>
+                <span className="mt-0.5 block text-slate-500">Desactívalo para couriers que no controlan el inventario de este almacén.</span>
+              </span>
+            </label>
           </div>
           <Button
             type="submit"
@@ -147,10 +204,18 @@ export function GestionCouriers({ couriersIniciales }: GestionCouriersProps) {
               key={courier.id}
               className="p-4 flex items-center justify-between hover:bg-slate-800/40 transition-colors"
             >
-              <span className="font-medium text-slate-200 text-sm flex items-center gap-2">
+              <span className="font-medium text-slate-200 text-sm flex flex-wrap items-center gap-2">
                 <span className="h-3 w-3 rounded-full border border-white/20" style={{ backgroundColor: courier.color }} />
                 {courier.nombre}
-                <span className="text-xs text-slate-500">· {courier.referenciaPredeterminada || 'Sin referencia predeterminada'}</span>
+                <span className="text-xs text-slate-500">
+                  · Referencia: {courier.referenciaPredeterminada || 'Sin predeterminada'}
+                </span>
+                <span className="text-xs text-slate-500">
+                  · Almacén: {courier.almacenPredeterminado?.nombre || 'Sin predeterminado'}
+                </span>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] ${courier.descuentaInventario ? 'border-emerald-800 bg-emerald-950/50 text-emerald-300' : 'border-slate-700 bg-slate-950 text-slate-400'}`}>
+                  {courier.descuentaInventario ? 'Descuenta stock' : 'No descuenta stock'}
+                </span>
               </span>
               <div className="flex items-center gap-1">
                 <Button
